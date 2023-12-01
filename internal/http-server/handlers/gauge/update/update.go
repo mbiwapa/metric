@@ -15,10 +15,10 @@ type GaugeUpdater interface {
 func New(gaugeUpdater GaugeUpdater) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		// if r.Method != http.MethodPost {
-		// 	w.WriteHeader(http.StatusMethodNotAllowed)
-		// return
-		// }
+		if r.Method != http.MethodPost {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
 		path := strings.TrimPrefix(r.URL.Path, "/update/gauge/")
 		params := strings.Split(path, "/")
 

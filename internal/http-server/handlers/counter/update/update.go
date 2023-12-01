@@ -15,10 +15,10 @@ type CounterUpdater interface {
 func New(counterUpdater CounterUpdater) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		// if r.Method != http.MethodPost {
-		// 	w.WriteHeader(http.StatusMethodNotAllowed)
-		// return
-		// }
+		if r.Method != http.MethodPost {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
 		path := strings.TrimPrefix(r.URL.Path, "/update/counter/")
 		params := strings.Split(path, "/")
 
