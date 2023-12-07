@@ -1,6 +1,9 @@
 package memstorage
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
 
 // MemStorage Структура для хранения метрик
 type MemStorage struct {
@@ -81,4 +84,24 @@ func (s *MemStorage) GetAllMetrics() ([][]string, [][]string, error) {
 	}
 
 	return gauge, counter, nil
+}
+
+// GetMetric Возвращает метрику по ключу
+func (s *MemStorage) GetMetric(typ string, key string) (string, error) {
+	if typ == "gauge" {
+		for _, metric := range s.Gauge {
+			if metric.Name == key {
+				return fmt.Sprintf("%f", metric.Value), nil
+			}
+		}
+	}
+	if typ == "counter" {
+		for _, metric := range s.Counter {
+			if metric.Name == key {
+				return fmt.Sprintf("%d", metric.Value), nil
+			}
+		}
+	}
+
+	return "", errors.New("Metric not found")
 }

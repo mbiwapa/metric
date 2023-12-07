@@ -3,7 +3,8 @@ package update
 import (
 	"net/http"
 	"strconv"
-	"strings"
+
+	"github.com/go-chi/chi"
 )
 
 // GaugeUpdater interface for storage
@@ -17,25 +18,22 @@ type GaugeUpdater interface {
 func New(gaugeUpdater GaugeUpdater) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			w.WriteHeader(http.StatusMethodNotAllowed)
-			return
-		}
-		path := strings.TrimPrefix(r.URL.Path, "/update/gauge/")
-		params := strings.Split(path, "/")
 
-		if len(params) < 2 {
+		name := chi.URLParam(r, "name")
+		value := chi.URLParam(r, "value")
+
+		if name == "" || value == "" {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 
-		val, err := strconv.ParseFloat(params[1], 64)
+		val, err := strconv.ParseFloat(value, 64)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
-		err = gaugeUpdater.GaugeUpdate(params[0], val)
+		err = gaugeUpdater.GaugeUpdate(name, val)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return

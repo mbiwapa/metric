@@ -3,8 +3,12 @@ package main
 import (
 	"net/http"
 
+	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/middleware"
 	cupdate "github.com/mbiwapa/metric/internal/http-server/handlers/counter/update"
 	gupdate "github.com/mbiwapa/metric/internal/http-server/handlers/gauge/update"
+	"github.com/mbiwapa/metric/internal/http-server/handlers/home"
+	"github.com/mbiwapa/metric/internal/http-server/handlers/value"
 	"github.com/mbiwapa/metric/internal/storage/memstorage"
 )
 
@@ -16,13 +20,24 @@ func main() {
 		panic("Storage unavailable!")
 	}
 
-	mux := http.NewServeMux()
+	router := chi.NewRouter()
 
-	mux.HandleFunc("/update/gauge/", gupdate.New(stor))
-	mux.HandleFunc("/update/counter/", cupdate.New(stor))
-	mux.HandleFunc("/update/", undefinedType)
+	router.Use(middleware.URLFormat)
 
-	err = http.ListenAndServe(":8080", mux)
+	router.Route("/update", func(r chi.Router) {
+		r.Post("/", undefinedType)
+		r.Post("/gauge/{name}/{value}", gupdate.New(stor))
+		r.Post("/counter/{name}/{value}", cupdate.New(stor))
+	})
+	router.Get("/value/{type}/{name}", value.New(stor))
+	router.Get("/", home.New(stor))
+
+	srv := &http.Server{
+		Addr:    "localhost:8080",
+		Handler: router,
+	}
+
+	err = srv.ListenAndServe()
 	if err != nil {
 		panic("The server did not start!")
 	}

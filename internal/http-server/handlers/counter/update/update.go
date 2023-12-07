@@ -3,7 +3,8 @@ package update
 import (
 	"net/http"
 	"strconv"
-	"strings"
+
+	"github.com/go-chi/chi"
 )
 
 // CounterUpdater interface for storage
@@ -17,25 +18,21 @@ type CounterUpdater interface {
 func New(counterUpdater CounterUpdater) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			w.WriteHeader(http.StatusMethodNotAllowed)
-			return
-		}
-		path := strings.TrimPrefix(r.URL.Path, "/update/counter/")
-		params := strings.Split(path, "/")
+		name := chi.URLParam(r, "name")
+		value := chi.URLParam(r, "value")
 
-		if len(params) < 2 {
+		if name == "" || value == "" {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 
-		val, err := strconv.ParseInt(params[1], 0, 64)
+		val, err := strconv.ParseInt(value, 0, 64)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
-		err = counterUpdater.CounterUpdate(params[0], val)
+		err = counterUpdater.CounterUpdate(name, val)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return

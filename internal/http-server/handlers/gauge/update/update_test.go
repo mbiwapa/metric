@@ -6,6 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/middleware"
 	"github.com/mbiwapa/metric/internal/http-server/handlers/gauge/update/mocks"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -66,17 +68,21 @@ func TestNew(t *testing.T) {
 					Once()
 			}
 
-			handler := New(GaugeUpdaterMock)
+			r := chi.NewRouter()
+			r.Use(middleware.URLFormat)
+			r.Post("/update/gauge/{name}/{value}", New(GaugeUpdaterMock))
+			ts := httptest.NewServer(r)
+			defer ts.Close()
 
-			req, err := http.NewRequest(tt.httpMethod, tt.url, nil)
-
+			req, err := http.NewRequest(tt.httpMethod, ts.URL+tt.url, nil)
 			require.NoError(t, err)
 
-			rr := httptest.NewRecorder()
+			resp, err := ts.Client().Do(req)
+			require.NoError(t, err)
 
-			handler.ServeHTTP(rr, req)
+			defer resp.Body.Close()
 
-			require.Equal(t, rr.Code, tt.wantStatus)
+			require.Equal(t, resp.StatusCode, tt.wantStatus)
 		})
 	}
 }

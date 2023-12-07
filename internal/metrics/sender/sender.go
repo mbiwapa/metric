@@ -4,8 +4,8 @@ import (
 	"time"
 )
 
-// MetricGeter interface for Metric repo
-type MetricGeter interface {
+// AllMetricGeter interface for Metric repo
+type AllMetricGeter interface {
 	GetAllMetrics() ([][]string, [][]string, error)
 }
 
@@ -15,10 +15,10 @@ type MetricSender interface {
 }
 
 // Start запускает процесс отправки метрик раз в reportInterval секунд
-func Start(stor MetricGeter, sender MetricSender, reportInterval int64) {
+func Start(stor AllMetricGeter, sender MetricSender, reportInterval int64) {
 	for {
 
-		gauge, couner, err := stor.GetAllMetrics()
+		gauge, counter, err := stor.GetAllMetrics()
 		if err != nil {
 			// TODO можно ли тут паниковать?
 			panic("Stor unavailable!")
@@ -32,7 +32,7 @@ func Start(stor MetricGeter, sender MetricSender, reportInterval int64) {
 
 			}
 		}
-		for _, metric := range couner {
+		for _, metric := range counter {
 
 			err = sender.Send("counter", metric[0], metric[1])
 			if err != nil {
