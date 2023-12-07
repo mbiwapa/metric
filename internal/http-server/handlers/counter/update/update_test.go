@@ -23,7 +23,7 @@ func TestNew(t *testing.T) {
 			name:       "Counter Тест 1, успешный ответ",
 			wantStatus: http.StatusOK,
 			mockError:  nil,
-			url:        "/update/counter/test1/0.5653",
+			url:        "/update/counter/test1/1",
 			httpMethod: http.MethodPost,
 		},
 		{
@@ -37,7 +37,7 @@ func TestNew(t *testing.T) {
 			name:       "Counter Тест 3, не работает хранилище",
 			wantStatus: http.StatusBadRequest,
 			mockError:  fmt.Errorf("Stor unavailable"),
-			url:        "/update/counter/test1/0.5653",
+			url:        "/update/counter/test1/1",
 			httpMethod: http.MethodPost,
 		},
 		{
@@ -61,7 +61,7 @@ func TestNew(t *testing.T) {
 			CounterUpdaterMock := mocks.NewCounterUpdater(t)
 
 			if tt.wantStatus == http.StatusOK || tt.mockError != nil {
-				CounterUpdaterMock.On("GaugeUpdate", mock.AnythingOfType("string"), mock.AnythingOfType("float64")).
+				CounterUpdaterMock.On("CounterUpdate", mock.AnythingOfType("string"), mock.AnythingOfType("int64")).
 					Return(tt.mockError).
 					Once()
 			}
