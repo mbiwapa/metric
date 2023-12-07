@@ -3,6 +3,7 @@ package memstorage
 import (
 	"errors"
 	"fmt"
+	"strconv"
 )
 
 // MemStorage Структура для хранения метрик
@@ -35,7 +36,7 @@ func (s *MemStorage) GaugeUpdate(key string, value float64) error {
 	changed := false
 	for i := 0; i < len(s.Gauge); i++ {
 		if s.Gauge[i].Name == key {
-			s.Gauge[i].Value = float64(value)
+			s.Gauge[i].Value = value
 			changed = true
 		}
 	}
@@ -43,7 +44,7 @@ func (s *MemStorage) GaugeUpdate(key string, value float64) error {
 	if !changed {
 		var metric Gauge
 		metric.Name = key
-		metric.Value = float64(value)
+		metric.Value = value
 		s.Gauge = append(s.Gauge, metric)
 	}
 
@@ -66,6 +67,7 @@ func (s *MemStorage) CounterUpdate(key string, value int64) error {
 		metric.Value = int64(value)
 		s.Counter = append(s.Counter, metric)
 	}
+	fmt.Println(s)
 
 	return nil
 }
@@ -74,12 +76,12 @@ func (s *MemStorage) CounterUpdate(key string, value int64) error {
 func (s *MemStorage) GetAllMetrics() ([][]string, [][]string, error) {
 	gauge := make([][]string, 0, 30)
 	for _, metric := range s.Gauge {
-		value := []string{metric.Name, fmt.Sprintf("%f", metric.Value)}
+		value := []string{metric.Name, strconv.FormatFloat(metric.Value, 'f', -1, 64)}
 		gauge = append(gauge, value)
 	}
 	counter := make([][]string, 0, 5)
 	for _, metric := range s.Counter {
-		value := []string{metric.Name, fmt.Sprintf("%d", metric.Value)}
+		value := []string{metric.Name, strconv.FormatInt(metric.Value, 10)}
 		counter = append(counter, value)
 	}
 
@@ -91,14 +93,14 @@ func (s *MemStorage) GetMetric(typ string, key string) (string, error) {
 	if typ == "gauge" {
 		for _, metric := range s.Gauge {
 			if metric.Name == key {
-				return fmt.Sprintf("%f", metric.Value), nil
+				return strconv.FormatFloat(metric.Value, 'f', -1, 64), nil
 			}
 		}
 	}
 	if typ == "counter" {
 		for _, metric := range s.Counter {
 			if metric.Name == key {
-				return fmt.Sprintf("%d", metric.Value), nil
+				return strconv.FormatInt(metric.Value, 10), nil
 			}
 		}
 	}
