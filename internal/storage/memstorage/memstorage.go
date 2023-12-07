@@ -103,5 +103,5 @@ func (s *MemStorage) GetMetric(typ string, key string) (string, error) {
 		}
 	}
 
-	return "", errors.New("Metric not found")
+	return "", errors.New("metric not found")
 }
