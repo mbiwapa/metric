@@ -5,8 +5,8 @@ import (
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
-	cupdate "github.com/mbiwapa/metric/internal/http-server/handlers/counter/update"
-	gupdate "github.com/mbiwapa/metric/internal/http-server/handlers/gauge/update"
+	"github.com/mbiwapa/metric/internal/http-server/handlers/update"
+
 	"github.com/mbiwapa/metric/internal/http-server/handlers/home"
 	"github.com/mbiwapa/metric/internal/http-server/handlers/value"
 	"github.com/mbiwapa/metric/internal/storage/memstorage"
@@ -26,8 +26,7 @@ func main() {
 
 	router.Route("/update", func(r chi.Router) {
 		r.Post("/", undefinedType)
-		r.Post("/gauge/{name}/{value}", gupdate.New(stor))
-		r.Post("/counter/{name}/{value}", cupdate.New(stor))
+		r.Post("/{type}/{name}/{value}", update.New(stor))
 	})
 	router.Get("/value/{type}/{name}", value.New(stor))
 	router.Get("/", home.New(stor))
