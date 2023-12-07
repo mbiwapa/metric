@@ -5,12 +5,12 @@ import (
 
 	cupdate "github.com/mbiwapa/metric/internal/http-server/handlers/counter/update"
 	gupdate "github.com/mbiwapa/metric/internal/http-server/handlers/gauge/update"
-	"github.com/mbiwapa/metric/internal/storage"
+	"github.com/mbiwapa/metric/internal/storage/memstorage"
 )
 
 func main() {
 
-	stor, err := storage.New()
+	stor, err := memstorage.New()
 
 	if err != nil {
 		panic("Storage unavailable!")

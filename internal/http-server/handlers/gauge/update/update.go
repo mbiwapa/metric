@@ -7,6 +7,8 @@ import (
 )
 
 // GaugeUpdater interface for storage
+//
+//go:generate go run github.com/vektra/mockery/v2@v2.28.2 --name=GaugeUpdater
 type GaugeUpdater interface {
 	GaugeUpdate(key string, value float64) error
 }

@@ -7,6 +7,8 @@ import (
 )
 
 // CounterUpdater interface for storage
+//
+//go:generate go run github.com/vektra/mockery/v2@v2.28.2 --name=CounterUpdater
 type CounterUpdater interface {
 	CounterUpdate(key string, value int64) error
 }

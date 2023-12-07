@@ -1,4 +1,4 @@
-package storage
+package memstorage
 
 import "fmt"
 
@@ -43,7 +43,6 @@ func (s *MemStorage) GaugeUpdate(key string, value float64) error {
 		metric.Value = float64(value)
 		s.Gauge = append(s.Gauge, metric)
 	}
-	fmt.Println(s)
 
 	return nil
 }
@@ -64,7 +63,22 @@ func (s *MemStorage) CounterUpdate(key string, value int64) error {
 		metric.Value = int64(value)
 		s.Counter = append(s.Counter, metric)
 	}
-	fmt.Println(s)
 
 	return nil
+}
+
+// GetAllMetrics Возвращает слайс метрик 2 типов gauge и counter
+func (s *MemStorage) GetAllMetrics() ([][]string, [][]string, error) {
+	gauge := make([][]string, 0, 30)
+	for _, metric := range s.Gauge {
+		value := []string{metric.Name, fmt.Sprintf("%f", metric.Value)}
+		gauge = append(gauge, value)
+	}
+	counter := make([][]string, 0, 5)
+	for _, metric := range s.Counter {
+		value := []string{metric.Name, fmt.Sprintf("%d", metric.Value)}
+		counter = append(counter, value)
+	}
+
+	return gauge, counter, nil
 }
