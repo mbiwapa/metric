@@ -23,6 +23,11 @@ func New(url string) (*Client, error) {
 func (c *Client) Send(typ string, name string, value string) error {
 
 	req, err := http.NewRequest("POST", c.URL+"/"+typ+"/"+name+"/"+value, nil)
+	if err != nil {
+		//TODO можно ли тут паниковать? Мне кажется да.
+		panic("Не удалось создать клиент")
+	}
+
 	req.Header.Set("Content-Type", "text/plain")
 
 	resp, err := c.Client.Do(req)

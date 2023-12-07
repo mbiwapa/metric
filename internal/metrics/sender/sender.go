@@ -1,7 +1,6 @@
 package sender
 
 import (
-	"fmt"
 	"time"
 )
 
@@ -22,16 +21,15 @@ func Start(stor MetricGeter, sender MetricSender, reportInterval int64) {
 		gauge, couner, err := stor.GetAllMetrics()
 		if err != nil {
 			// TODO можно ли тут паниковать?
-			fmt.Errorf("Stor unavailable!")
-			return
+			panic("Stor unavailable!")
 		}
 		for _, metric := range gauge {
 
 			err = sender.Send("gauge", metric[0], metric[1])
 			if err != nil {
-				//TODO ошибку сделать
-				fmt.Errorf("Не отправилось почему-то")
-				// continue
+				//TODO ошибку сделать можно ли тут паниковать?
+				panic(err.Error())
+
 			}
 		}
 		for _, metric := range couner {
@@ -39,11 +37,10 @@ func Start(stor MetricGeter, sender MetricSender, reportInterval int64) {
 			err = sender.Send("counter", metric[0], metric[1])
 			if err != nil {
 				//TODO ошибку сделать
-				fmt.Errorf("Не отправилось почему-то")
-				// continue
+				panic(err.Error())
 			}
 		}
-		sleepSeconds := time.Duration(reportInterval) * time.Second
-		time.Sleep(sleepSeconds)
+		sleepSecond := time.Duration(reportInterval) * time.Second
+		time.Sleep(sleepSecond)
 	}
 }

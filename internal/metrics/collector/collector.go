@@ -1,7 +1,6 @@
 package collector
 
 import (
-	"fmt"
 	"math/rand"
 	"time"
 )
@@ -29,32 +28,28 @@ func Start(repo MetricGeter, stor MetricUpdater, list []ObservableMetric, pollIn
 		for _, metric := range list {
 			value, err := repo.MetricGet(metric.Name, metric.SourceType)
 			if err != nil {
-				//TODO ошибку сделать
-				fmt.Errorf("Metric %q no longer supported", metric.Name)
-				// continue
+				//TODO ошибку сделать и можно ли тут паниковать?
+				panic("Metric no longer supported")
 			}
 			err = stor.GaugeUpdate(metric.Name, value)
 			if err != nil {
 				//TODO ошибку сделать
-				fmt.Errorf("Stor unavailable!")
-				// continue
+				panic("Stor unavailable!")
 			}
 		}
 		err := stor.GaugeUpdate("RandomValue", rand.Float64())
 		if err != nil {
 			//TODO ошибку сделать
-			fmt.Errorf("Stor unavailable!")
-			// continue
+			panic("Stor unavailable!")
 		}
 
 		err = stor.CounterUpdate("PollCount", 1)
 		if err != nil {
 			//TODO ошибку сделать
-			fmt.Errorf("Stor unavailable!")
-			// continue
+			panic("Stor unavailable!")
 		}
 
-		sleepSeconds := time.Duration(pollInterval) * time.Second
-		time.Sleep(sleepSeconds)
+		sleepSecond := time.Duration(pollInterval) * time.Second
+		time.Sleep(sleepSecond)
 	}
 }

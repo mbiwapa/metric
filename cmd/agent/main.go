@@ -41,11 +41,10 @@ func main() {
 		{Name: "Sys", SourceType: "uint"},
 		{Name: "TotalAlloc", SourceType: "uint"},
 	}
-	var pollInterval int64
-	pollInterval = 2
-
-	var reportInterval int64
-	reportInterval = 10
+	var (
+		pollInterval   int64 = 2
+		reportInterval int64 = 10
+	)
 
 	metricsRepo, err := metrepo.New()
 	if err != nil {
