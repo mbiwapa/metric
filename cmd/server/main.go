@@ -26,12 +26,7 @@ func main() {
 
 	router.Route("/update", func(r chi.Router) {
 		r.Post("/", undefinedType)
-		// TODO без / на конце обрезает по первой .
-		r.Post("/{type}/{name}/{value}", func(w http.ResponseWriter, r *http.Request) {
-			http.Redirect(w, r, r.URL.Path+"/", http.StatusFound)
-			return
-		})
-		r.Post("/{type}/{name}/{value}/", update.New(stor))
+		r.Post("/{type}/{name}/{value}", update.New(stor))
 	})
 	router.Get("/value/{type}/{name}", value.New(stor))
 	router.Get("/", home.New(stor))

@@ -3,6 +3,7 @@ package update
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi"
 )
@@ -21,8 +22,11 @@ func New(stor Updater) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		name := chi.URLParam(r, "name")
-		value := chi.URLParam(r, "value")
 		typ := chi.URLParam(r, "type")
+
+		// value := chi.URLParam(r, "value")
+		//TODO от chi не работает, режет по . и не принимает float
+		value := strings.TrimPrefix(r.URL.Path, "/update/"+typ+"/"+name+"/")
 
 		if name == "" || value == "" {
 			w.WriteHeader(http.StatusNotFound)
