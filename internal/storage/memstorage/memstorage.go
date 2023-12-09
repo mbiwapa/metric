@@ -2,7 +2,6 @@ package memstorage
 
 import (
 	"errors"
-	"fmt"
 	"strconv"
 )
 
@@ -67,8 +66,6 @@ func (s *MemStorage) CounterUpdate(key string, value int64) error {
 		metric.Value = int64(value)
 		s.Counter = append(s.Counter, metric)
 	}
-	fmt.Println(s)
-
 	return nil
 }
 
