@@ -18,6 +18,7 @@ type Config struct {
 func MustLoadConfig() *Config {
 	var config Config
 	flag.StringVar(&config.Addr, "a", "localhost:8080", "Адрес  и порт сервера по сбору метрик")
+	config.Addr = "http://" + config.Addr
 	flag.Int64Var(&config.ReportInterval, "r", 10, "Частота отправки метрик на сервер (по умолчанию 10 секунд)")
 	flag.Int64Var(&config.PollInterval, "p", 2, "Частота опроса метрик из источника (по умолчанию 2 секунды)")
 	config.ObservableMetrics = getObservableMetrics()
