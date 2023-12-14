@@ -7,9 +7,10 @@ import (
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
-	"github.com/mbiwapa/metric/internal/http-server/handlers/value/mocks"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+
+	"github.com/mbiwapa/metric/internal/http-server/handlers/value/mocks"
 )
 
 func TestNew(t *testing.T) {

@@ -8,8 +8,9 @@ import (
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
-	"github.com/mbiwapa/metric/internal/http-server/handlers/home/mocks"
 	"github.com/stretchr/testify/require"
+
+	"github.com/mbiwapa/metric/internal/http-server/handlers/home/mocks"
 )
 
 func TestNew(t *testing.T) {

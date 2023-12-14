@@ -28,25 +28,25 @@ func Start(repo MetricGeter, stor MetricUpdater, list []ObservableMetric, pollIn
 		for _, metric := range list {
 			value, err := repo.MetricGet(metric.Name, metric.SourceType)
 			if err != nil {
-				//TODO ошибку сделать и можно ли тут паниковать?
+				//TODO error chanel
 				panic("Metric no longer supported")
 			}
 			err = stor.GaugeUpdate(metric.Name, value)
 			if err != nil {
-				//TODO ошибку сделать
-				panic("Stor unavailable!")
+				//TODO error chanel
+				panic("Storage unavailable!")
 			}
 		}
 		err := stor.GaugeUpdate("RandomValue", rand.Float64())
 		if err != nil {
-			//TODO ошибку сделать
-			panic("Stor unavailable!")
+			//TODO error chanel
+			panic("Storage unavailable!")
 		}
 
 		err = stor.CounterUpdate("PollCount", 1)
 		if err != nil {
-			//TODO ошибку сделать
-			panic("Stor unavailable!")
+			//TODO error chanel
+			panic("Storage unavailable!")
 		}
 
 		sleepSecond := time.Duration(pollInterval) * time.Second

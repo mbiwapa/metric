@@ -20,14 +20,14 @@ func Start(stor AllMetricGeter, sender MetricSender, reportInterval int64) {
 
 		gauge, counter, err := stor.GetAllMetrics()
 		if err != nil {
-			// TODO можно ли тут паниковать?
+			//TODO error chanel
 			panic("Stor unavailable!")
 		}
 		for _, metric := range gauge {
 
 			err = sender.Send("gauge", metric[0], metric[1])
 			if err != nil {
-				//TODO ошибку сделать можно ли тут паниковать?
+				//TODO error chanel
 				panic(err.Error())
 
 			}
@@ -36,7 +36,7 @@ func Start(stor AllMetricGeter, sender MetricSender, reportInterval int64) {
 
 			err = sender.Send("counter", metric[0], metric[1])
 			if err != nil {
-				//TODO ошибку сделать
+				//TODO error chanel
 				panic(err.Error())
 			}
 		}

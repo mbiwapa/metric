@@ -13,7 +13,10 @@ import (
 
 func main() {
 
-	conf := config.MustLoadConfig()
+	conf, err := config.MustLoadConfig()
+	if err != nil {
+		panic(err)
+	}
 
 	metricsRepo, err := metrepo.New()
 	if err != nil {

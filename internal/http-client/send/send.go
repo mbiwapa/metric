@@ -24,16 +24,14 @@ func (c *Client) Send(typ string, name string, value string) error {
 
 	req, err := http.NewRequest("POST", c.URL+"/update/"+typ+"/"+name+"/"+value, nil)
 	if err != nil {
-		//TODO можно ли тут паниковать? Мне кажется да.
-		panic("Не удалось создать клиент")
+		return err
 	}
 
 	req.Header.Set("Content-Type", "text/plain")
 
 	resp, err := c.Client.Do(req)
 	if err != nil {
-		//TODO можно ли тут паниковать? Мне кажется да.
-		panic("Сервер сбора метрик недоступен")
+		return err
 	}
 	defer resp.Body.Close()
 

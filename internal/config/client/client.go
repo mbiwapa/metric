@@ -18,7 +18,7 @@ type Config struct {
 }
 
 // MustLoadConfig загрузка конфигурации
-func MustLoadConfig() *Config {
+func MustLoadConfig() (*Config, error) {
 	var Addr string
 	var PollInterval int64
 	var ReportInterval int64
@@ -38,13 +38,13 @@ func MustLoadConfig() *Config {
 	if envPollInterval != "" {
 		PollInterval, err = strconv.ParseInt(envPollInterval, 10, 64)
 		if err != nil && envPollInterval != "" {
-			panic(fmt.Sprintf("invalid env value: %s. %s", envPollInterval, err))
+			return nil, fmt.Errorf("invalid env value: %s. %s", envPollInterval, err)
 		}
 	}
 	if envReportInterval != "" {
 		ReportInterval, err = strconv.ParseInt(envReportInterval, 10, 64)
 		if err != nil && envReportInterval != "" {
-			panic(fmt.Sprintf("invalid env value: %s. %s", envReportInterval, err))
+			return nil, fmt.Errorf("invalid env value: %s. %s", envReportInterval, err)
 		}
 	}
 
@@ -55,7 +55,7 @@ func MustLoadConfig() *Config {
 		ReportInterval:    ReportInterval,
 	}
 
-	return cfg
+	return cfg, nil
 }
 
 // getObservableMetrics возвращает список метрик для отслеживание агентом
