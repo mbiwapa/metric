@@ -55,7 +55,7 @@ func TestNew(t *testing.T) {
 
 			logger, err := logger.New("info")
 			if err != nil {
-				fmt.Errorf(err.Error())
+				fmt.Printf(err.Error())
 			}
 
 			r := chi.NewRouter()
