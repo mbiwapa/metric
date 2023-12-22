@@ -17,16 +17,16 @@ import (
 func main() {
 
 	conf, err := config.MustLoadConfig()
-	logger, err := logger.New("info")
-
 	if err != nil {
 		panic("Logger initialization error: " + err.Error())
 	}
-	logger.Info("Start service!")
+
+	logger, err := logger.New("info")
 	if err != nil {
-		logger.Error("Can't load config", zap.Error(err))
-		os.Exit(1)
+		panic("Logger initialization error: " + err.Error())
 	}
+
+	logger.Info("Start service!")
 
 	metricsRepo, err := memstats.New()
 	if err != nil {
