@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/mbiwapa/metric/internal/http-server/handlers/value/mocks"
+	"github.com/mbiwapa/metric/internal/logger"
 )
 
 func TestNew(t *testing.T) {
@@ -56,9 +57,14 @@ func TestNew(t *testing.T) {
 					Once()
 			}
 
+			logger, err := logger.New("info")
+			if err != nil {
+				panic("Logger initialization error: " + err.Error())
+			}
+
 			r := chi.NewRouter()
 			r.Use(middleware.URLFormat)
-			r.Get("/value/{type}/{name}", New(MetricGeterMock))
+			r.Get("/value/{type}/{name}", New(logger, MetricGeterMock))
 			ts := httptest.NewServer(r)
 			defer ts.Close()
 

@@ -1,4 +1,4 @@
-package metrepo
+package memstats
 
 import (
 	"reflect"

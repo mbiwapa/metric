@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/mbiwapa/metric/internal/http-server/handlers/update/mocks"
+	"github.com/mbiwapa/metric/internal/logger"
 )
 
 func TestNew(t *testing.T) {
@@ -119,20 +120,25 @@ func TestNew(t *testing.T) {
 
 			if tt.wantStatus == http.StatusOK || tt.mockError != nil {
 				if tt.typ == "gauge" {
-					UpdaterMock.On("GaugeUpdate", mock.AnythingOfType("string"), mock.AnythingOfType("float64")).
+					UpdaterMock.On("UpdateGauge", mock.AnythingOfType("string"), mock.AnythingOfType("float64")).
 						Return(tt.mockError).
 						Once()
 				}
 				if tt.typ == "counter" {
-					UpdaterMock.On("CounterUpdate", mock.AnythingOfType("string"), mock.AnythingOfType("int64")).
+					UpdaterMock.On("UpdateCounter", mock.AnythingOfType("string"), mock.AnythingOfType("int64")).
 						Return(tt.mockError).
 						Once()
 				}
 			}
 
+			logger, err := logger.New("info")
+			if err != nil {
+				panic("Logger initialization error: " + err.Error())
+			}
+
 			r := chi.NewRouter()
 			r.Use(middleware.URLFormat)
-			r.Post("/update/{type}/{name}/{value}", New(UpdaterMock))
+			r.Post("/update/{type}/{name}/{value}", New(logger, UpdaterMock))
 			ts := httptest.NewServer(r)
 			defer ts.Close()
 
