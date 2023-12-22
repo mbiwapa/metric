@@ -1,14 +1,13 @@
 package update
 
 import (
-	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
-	"github.com/mbiwapa/metric/internal/lib/logger/sl"
+	"go.uber.org/zap"
 )
 
 // Updater interface for storage
@@ -20,14 +19,14 @@ type Updater interface {
 }
 
 // New returned func for update
-func New(log *slog.Logger, storage Updater) http.HandlerFunc {
+func New(log *zap.Logger, storage Updater) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		const op = "handlers.update.New"
 
 		log.With(
-			slog.String("op", op),
-			slog.String("request_id", middleware.GetReqID(r.Context())),
+			zap.String("op", op),
+			zap.String("request_id", middleware.GetReqID(r.Context())),
 		)
 
 		name := chi.URLParam(r, "name")
@@ -40,8 +39,8 @@ func New(log *slog.Logger, storage Updater) http.HandlerFunc {
 		if name == "" || value == "" {
 			log.Error(
 				"Name or Value is empty!",
-				slog.String("name", name),
-				slog.String("value", value))
+				zap.String("name", name),
+				zap.String("value", value))
 
 			w.WriteHeader(http.StatusNotFound)
 			return
@@ -51,31 +50,31 @@ func New(log *slog.Logger, storage Updater) http.HandlerFunc {
 		case "gauge":
 			val, err := strconv.ParseFloat(value, 64)
 			if err != nil {
-				log.Error("Failed to parse gauge value", sl.Err(err))
+				log.Error("Failed to parse gauge value", zap.Error(err))
 				w.WriteHeader(http.StatusBadRequest)
 				return
 			}
 			err = storage.UpdateGauge(name, val)
 			if err != nil {
-				log.Error("Failed to update gauge value", sl.Err(err))
+				log.Error("Failed to update gauge value", zap.Error(err))
 				w.WriteHeader(http.StatusBadRequest)
 				return
 			}
 		case "counter":
 			val, err := strconv.ParseInt(value, 0, 64)
 			if err != nil {
-				log.Error("Failed to parse counter value", sl.Err(err))
+				log.Error("Failed to parse counter value", zap.Error(err))
 				w.WriteHeader(http.StatusBadRequest)
 				return
 			}
 			err = storage.UpdateCounter(name, val)
 			if err != nil {
-				log.Error("Failed to update counter value", sl.Err(err))
+				log.Error("Failed to update counter value", zap.Error(err))
 				w.WriteHeader(http.StatusBadRequest)
 				return
 			}
 		default:
-			log.Error("Undefined metric type", slog.String("type", typ))
+			log.Error("Undefined metric type", zap.String("type", typ))
 			w.WriteHeader(http.StatusBadRequest)
 			return
 

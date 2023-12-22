@@ -1,11 +1,10 @@
 package home
 
 import (
-	"log/slog"
 	"net/http"
 
 	"github.com/go-chi/chi/middleware"
-	"github.com/mbiwapa/metric/internal/lib/logger/sl"
+	"go.uber.org/zap"
 )
 
 // AllMetricGeter interface for Metric repo
@@ -16,23 +15,23 @@ type AllMetricGeter interface {
 }
 
 // New возвращает обработчик возвращающий HTML страницу со всеми доступными
-func New(log *slog.Logger, storage AllMetricGeter) http.HandlerFunc {
+func New(log *zap.Logger, storage AllMetricGeter) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		const op = "handlers.home.New"
 
 		log.With(
-			slog.String("op", op),
-			slog.String("request_id", middleware.GetReqID(r.Context())),
+			zap.String("op", op),
+			zap.String("request_id", middleware.GetReqID(r.Context())),
 		)
 
 		gauge, counter, err := storage.GetAllMetrics()
 		if err != nil {
-			log.Error("Failed to get all metrics", sl.Err(err))
+			log.Error("Failed to get all metrics", zap.Error(err))
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		log.Info("Metrics received", slog.Any("gauge", gauge), slog.Any("counter", counter))
+		log.Info("Metrics received", zap.Any("gauge", gauge), zap.Any("counter", counter))
 
 		body := "<!DOCTYPE html><html><head><title>Метрики</title><body><h1>Метрики</h1><ul>"
 

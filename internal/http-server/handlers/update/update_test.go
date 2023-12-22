@@ -2,10 +2,8 @@ package update
 
 import (
 	"fmt"
-	"log/slog"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 
 	"github.com/go-chi/chi"
@@ -14,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/mbiwapa/metric/internal/http-server/handlers/update/mocks"
+	"github.com/mbiwapa/metric/internal/logger"
 )
 
 func TestNew(t *testing.T) {
@@ -132,7 +131,10 @@ func TestNew(t *testing.T) {
 				}
 			}
 
-			logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
+			logger, err := logger.New("info")
+			if err != nil {
+				fmt.Errorf(err.Error())
+			}
 
 			r := chi.NewRouter()
 			r.Use(middleware.URLFormat)

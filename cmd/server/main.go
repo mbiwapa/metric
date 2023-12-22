@@ -1,19 +1,19 @@
 package main
 
 import (
-	"log/slog"
 	"net/http"
 	"os"
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
+	"go.uber.org/zap"
 
 	config "github.com/mbiwapa/metric/internal/config/server"
 	"github.com/mbiwapa/metric/internal/http-server/handlers/home"
 	"github.com/mbiwapa/metric/internal/http-server/handlers/update"
 	"github.com/mbiwapa/metric/internal/http-server/handlers/value"
 	mwLogger "github.com/mbiwapa/metric/internal/http-server/middleware/logger"
-	"github.com/mbiwapa/metric/internal/lib/logger/sl"
+	"github.com/mbiwapa/metric/internal/logger"
 	"github.com/mbiwapa/metric/internal/storage/memstorage"
 )
 
@@ -21,13 +21,17 @@ func main() {
 
 	config := config.MustLoadConfig()
 
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
+	logger, err := logger.New("info")
+
+	if err != nil {
+		panic("Logger initialization error: " + err.Error())
+	}
 
 	logger.Info("Start service!")
 
 	storage, err := memstorage.New()
 	if err != nil {
-		logger.Error("Can't create storage", sl.Err(err))
+		logger.Error("Can't create storage", zap.Error(err))
 		os.Exit(1)
 
 	}
@@ -52,7 +56,7 @@ func main() {
 
 	err = srv.ListenAndServe()
 	if err != nil {
-		logger.Error("The server did not start!", sl.Err(err))
+		logger.Error("The server did not start!", zap.Error(err))
 		os.Exit(1)
 	}
 }
