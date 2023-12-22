@@ -2,8 +2,10 @@ package update
 
 import (
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/go-chi/chi"
@@ -119,20 +121,22 @@ func TestNew(t *testing.T) {
 
 			if tt.wantStatus == http.StatusOK || tt.mockError != nil {
 				if tt.typ == "gauge" {
-					UpdaterMock.On("GaugeUpdate", mock.AnythingOfType("string"), mock.AnythingOfType("float64")).
+					UpdaterMock.On("UpdateGauge", mock.AnythingOfType("string"), mock.AnythingOfType("float64")).
 						Return(tt.mockError).
 						Once()
 				}
 				if tt.typ == "counter" {
-					UpdaterMock.On("CounterUpdate", mock.AnythingOfType("string"), mock.AnythingOfType("int64")).
+					UpdaterMock.On("UpdateCounter", mock.AnythingOfType("string"), mock.AnythingOfType("int64")).
 						Return(tt.mockError).
 						Once()
 				}
 			}
 
+			logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
+
 			r := chi.NewRouter()
 			r.Use(middleware.URLFormat)
-			r.Post("/update/{type}/{name}/{value}", New(UpdaterMock))
+			r.Post("/update/{type}/{name}/{value}", New(logger, UpdaterMock))
 			ts := httptest.NewServer(r)
 			defer ts.Close()
 

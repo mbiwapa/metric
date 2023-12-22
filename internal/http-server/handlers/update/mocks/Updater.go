@@ -9,8 +9,8 @@ type Updater struct {
 	mock.Mock
 }
 
-// CounterUpdate provides a mock function with given fields: key, value
-func (_m *Updater) CounterUpdate(key string, value int64) error {
+// UpdateCounter provides a mock function with given fields: key, value
+func (_m *Updater) UpdateCounter(key string, value int64) error {
 	ret := _m.Called(key, value)
 
 	var r0 error
@@ -23,8 +23,8 @@ func (_m *Updater) CounterUpdate(key string, value int64) error {
 	return r0
 }
 
-// GaugeUpdate provides a mock function with given fields: key, value
-func (_m *Updater) GaugeUpdate(key string, value float64) error {
+// UpdateGauge provides a mock function with given fields: key, value
+func (_m *Updater) UpdateGauge(key string, value float64) error {
 	ret := _m.Called(key, value)
 
 	var r0 error

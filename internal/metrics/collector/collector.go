@@ -12,8 +12,8 @@ type MetricGeter interface {
 
 // MetricUpdater interface for storage
 type MetricUpdater interface {
-	CounterUpdate(key string, value int64) error
-	GaugeUpdate(key string, value float64) error
+	UpdateCounter(key string, value int64) error
+	UpdateGauge(key string, value float64) error
 }
 
 // ObservableMetric структура для метрик за которыми следим
@@ -31,19 +31,19 @@ func Start(repo MetricGeter, stor MetricUpdater, list []ObservableMetric, pollIn
 				//TODO error chanel
 				panic("Metric no longer supported")
 			}
-			err = stor.GaugeUpdate(metric.Name, value)
+			err = stor.UpdateGauge(metric.Name, value)
 			if err != nil {
 				//TODO error chanel
 				panic("Storage unavailable!")
 			}
 		}
-		err := stor.GaugeUpdate("RandomValue", rand.Float64())
+		err := stor.UpdateGauge("RandomValue", rand.Float64())
 		if err != nil {
 			//TODO error chanel
 			panic("Storage unavailable!")
 		}
 
-		err = stor.CounterUpdate("PollCount", 1)
+		err = stor.UpdateCounter("PollCount", 1)
 		if err != nil {
 			//TODO error chanel
 			panic("Storage unavailable!")

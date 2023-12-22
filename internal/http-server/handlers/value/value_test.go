@@ -1,8 +1,10 @@
 package value
 
 import (
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/go-chi/chi"
@@ -56,9 +58,11 @@ func TestNew(t *testing.T) {
 					Once()
 			}
 
+			logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
+
 			r := chi.NewRouter()
 			r.Use(middleware.URLFormat)
-			r.Get("/value/{type}/{name}", New(MetricGeterMock))
+			r.Get("/value/{type}/{name}", New(logger, MetricGeterMock))
 			ts := httptest.NewServer(r)
 			defer ts.Close()
 

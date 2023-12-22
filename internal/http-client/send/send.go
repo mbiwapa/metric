@@ -1,7 +1,7 @@
 package send
 
 import (
-	"fmt"
+	"errors"
 	"net/http"
 )
 
@@ -36,7 +36,7 @@ func (c *Client) Send(typ string, name string, value string) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf(resp.Status)
+		return errors.New(resp.Status)
 	}
 	return nil
 }

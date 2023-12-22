@@ -1,7 +1,9 @@
 package main
 
 import (
+	"log/slog"
 	"net/http"
+	"os"
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
@@ -10,34 +12,48 @@ import (
 	"github.com/mbiwapa/metric/internal/http-server/handlers/home"
 	"github.com/mbiwapa/metric/internal/http-server/handlers/update"
 	"github.com/mbiwapa/metric/internal/http-server/handlers/value"
+	mwLogger "github.com/mbiwapa/metric/internal/http-server/middleware/logger"
+	"github.com/mbiwapa/metric/internal/lib/logger/sl"
 	"github.com/mbiwapa/metric/internal/storage/memstorage"
 )
 
 func main() {
-	conf := config.MustLoadConfig()
+
+	config := config.MustLoadConfig()
+
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
+
+	logger.Info("Start service!")
 
 	storage, err := memstorage.New()
 	if err != nil {
-		panic("Storage unavailable!")
+		logger.Error("Can't create storage", sl.Err(err))
+		os.Exit(1)
+
 	}
 
 	router := chi.NewRouter()
+
+	router.Use(middleware.RequestID)
+	router.Use(mwLogger.New(logger))
 	router.Use(middleware.URLFormat)
+
 	router.Route("/update", func(r chi.Router) {
 		r.Post("/", undefinedType)
-		r.Post("/{type}/{name}/{value}", update.New(storage))
+		r.Post("/{type}/{name}/{value}", update.New(logger, storage))
 	})
-	router.Get("/value/{type}/{name}", value.New(storage))
-	router.Get("/", home.New(storage))
+	router.Get("/value/{type}/{name}", value.New(logger, storage))
+	router.Get("/", home.New(logger, storage))
 
 	srv := &http.Server{
-		Addr:    conf.Addr,
+		Addr:    config.Addr,
 		Handler: router,
 	}
 
 	err = srv.ListenAndServe()
 	if err != nil {
-		panic("The server did not start!")
+		logger.Error("The server did not start!", sl.Err(err))
+		os.Exit(1)
 	}
 }
 

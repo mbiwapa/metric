@@ -1,7 +1,11 @@
 package home
 
 import (
+	"log/slog"
 	"net/http"
+
+	"github.com/go-chi/chi/middleware"
+	"github.com/mbiwapa/metric/internal/lib/logger/sl"
 )
 
 // AllMetricGeter interface for Metric repo
@@ -12,15 +16,23 @@ type AllMetricGeter interface {
 }
 
 // New возвращает обработчик возвращающий HTML страницу со всеми доступными
-func New(stor AllMetricGeter) http.HandlerFunc {
+func New(log *slog.Logger, storage AllMetricGeter) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
+		const op = "handlers.home.New"
 
-		gauge, counter, err := stor.GetAllMetrics()
+		log.With(
+			slog.String("op", op),
+			slog.String("request_id", middleware.GetReqID(r.Context())),
+		)
+
+		gauge, counter, err := storage.GetAllMetrics()
 		if err != nil {
+			log.Error("Failed to get all metrics", sl.Err(err))
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
+		log.Info("Metrics received", slog.Any("gauge", gauge), slog.Any("counter", counter))
 
 		body := "<!DOCTYPE html><html><head><title>Метрики</title><body><h1>Метрики</h1><ul>"
 

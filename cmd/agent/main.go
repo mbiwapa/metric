@@ -1,36 +1,46 @@
 package main
 
 import (
+	"log/slog"
+	"os"
 	"time"
 
 	config "github.com/mbiwapa/metric/internal/config/client"
 	"github.com/mbiwapa/metric/internal/http-client/send"
+	"github.com/mbiwapa/metric/internal/lib/logger/sl"
 	"github.com/mbiwapa/metric/internal/metrics/collector"
 	"github.com/mbiwapa/metric/internal/metrics/sender"
+	"github.com/mbiwapa/metric/internal/metrics/source/memstats"
 	"github.com/mbiwapa/metric/internal/storage/memstorage"
-	"github.com/mbiwapa/metric/internal/storage/metrepo"
 )
 
 func main() {
 
 	conf, err := config.MustLoadConfig()
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
+
+	logger.Info("Start service!")
 	if err != nil {
-		panic(err)
+		logger.Error("Can't load config", sl.Err(err))
+		os.Exit(1)
 	}
 
-	metricsRepo, err := metrepo.New()
+	metricsRepo, err := memstats.New()
 	if err != nil {
-		panic("Metrics Repo unavailable!")
+		logger.Error("Metrics source unavailable!", sl.Err(err))
+		os.Exit(1)
 	}
 
 	storage, err := memstorage.New()
 	if err != nil {
-		panic("Stor unavailable!")
+		logger.Error("Stor unavailable!", sl.Err(err))
+		os.Exit(1)
 	}
 
 	client, err := send.New(conf.Addr)
 	if err != nil {
-		panic("Stor unavailable!")
+		logger.Error("Dont create http client", sl.Err(err))
+		os.Exit(1)
 	}
 
 	go collector.Start(metricsRepo, storage, conf.ObservableMetrics, conf.PollInterval)
