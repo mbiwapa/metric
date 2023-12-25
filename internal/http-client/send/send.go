@@ -3,6 +3,7 @@ package send
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"net/http"
 	"strconv"
 
@@ -30,6 +31,8 @@ func New(url string, logger *zap.Logger) (*Client, error) {
 
 // Send отправляет метрику на сервер
 func (c *Client) Send(typ string, name string, value string) error {
+	const op = "http-client.send.Send"
+	c.Logger.With(zap.String("op", op))
 
 	body := format.Metrics{
 		MType: typ,
@@ -64,18 +67,21 @@ func (c *Client) Send(typ string, name string, value string) error {
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := c.Client.Do(req)
-	_ = resp
+	//FIXME именно в автотестах клиент периодически ловит EOF и отваливается
+	//FIXME как правило на первый же запрос, но потом приходит в себя, (Уточнить у ментора)
 	if err != nil {
-		//FIXME
-		// return err
+		c.Logger.Error("Cant send metric", zap.Error(err))
 	}
-	//FIXME
-	// b, err := io.ReadAll(resp.Body)
-	// c.Logger.Info("Response ready", zap.ByteString("response", b))
-	// defer resp.Body.Close()
 
-	// if resp.StatusCode != http.StatusOK {
-	// 	return errors.New(resp.Status)
-	// }
+	if resp != nil {
+		var byteResponse []byte
+		byteResponse, err = io.ReadAll(resp.Body)
+		c.Logger.Info("Response ready", zap.ByteString("response", byteResponse))
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			c.Logger.Error("Cant send metric", zap.String("error", resp.Status))
+		}
+	}
 	return nil
 }
