@@ -3,6 +3,7 @@ package memstorage
 import (
 	"strconv"
 
+	"github.com/mbiwapa/metric/internal/lib/api/format"
 	"github.com/mbiwapa/metric/internal/storage"
 )
 
@@ -88,14 +89,14 @@ func (s *MemStorage) GetAllMetrics() ([][]string, [][]string, error) {
 
 // GetMetric Возвращает метрику по ключу
 func (s *MemStorage) GetMetric(typ string, key string) (string, error) {
-	if typ == "gauge" {
+	if typ == format.Gauge {
 		for _, metric := range s.Gauge {
 			if metric.Name == key {
 				return strconv.FormatFloat(metric.Value, 'f', -1, 64), nil
 			}
 		}
 	}
-	if typ == "counter" {
+	if typ == format.Counter {
 		for _, metric := range s.Counter {
 			if metric.Name == key {
 				return strconv.FormatInt(metric.Value, 10), nil

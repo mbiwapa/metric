@@ -2,6 +2,8 @@ package sender
 
 import (
 	"time"
+
+	"github.com/mbiwapa/metric/internal/lib/api/format"
 )
 
 // AllMetricGeter interface for Metric repo
@@ -25,7 +27,7 @@ func Start(stor AllMetricGeter, sender MetricSender, reportInterval int64) {
 		}
 		for _, metric := range gauge {
 
-			err = sender.Send("gauge", metric[0], metric[1])
+			err = sender.Send(format.Gauge, metric[0], metric[1])
 			if err != nil {
 				//TODO error chanel
 				panic(err.Error())
@@ -34,7 +36,7 @@ func Start(stor AllMetricGeter, sender MetricSender, reportInterval int64) {
 		}
 		for _, metric := range counter {
 
-			err = sender.Send("counter", metric[0], metric[1])
+			err = sender.Send(format.Counter, metric[0], metric[1])
 			if err != nil {
 				//TODO error chanel
 				panic(err.Error())

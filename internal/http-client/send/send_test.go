@@ -23,9 +23,9 @@ func TestClient_Send(t *testing.T) {
 		{
 			name: "Clietn Тест 1 - успешный тест",
 			args: args{
-				typ:   "counter",
+				typ:   "gauge",
 				name:  "test2",
-				value: "0.5676",
+				value: "0.5686",
 			},
 			wantErr: false,
 		},

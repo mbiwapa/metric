@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
+	"github.com/mbiwapa/metric/internal/lib/api/format"
 	"go.uber.org/zap"
 )
 
@@ -47,7 +48,7 @@ func New(log *zap.Logger, storage Updater) http.HandlerFunc {
 		}
 
 		switch typ {
-		case "gauge":
+		case format.Gauge:
 			val, err := strconv.ParseFloat(value, 64)
 			if err != nil {
 				log.Error("Failed to parse gauge value", zap.Error(err))
@@ -60,7 +61,7 @@ func New(log *zap.Logger, storage Updater) http.HandlerFunc {
 				w.WriteHeader(http.StatusBadRequest)
 				return
 			}
-		case "counter":
+		case format.Counter:
 			val, err := strconv.ParseInt(value, 0, 64)
 			if err != nil {
 				log.Error("Failed to parse counter value", zap.Error(err))

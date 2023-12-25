@@ -46,7 +46,9 @@ func main() {
 		r.Post("/", undefinedType)
 		r.Post("/{type}/{name}/{value}", update.New(logger, storage))
 	})
+	router.Post("/update", update.NewJSON(logger, storage))
 	router.Get("/value/{type}/{name}", value.New(logger, storage))
+	router.Post("/value", value.NewJSON(logger, storage))
 	router.Get("/", home.New(logger, storage))
 
 	srv := &http.Server{
