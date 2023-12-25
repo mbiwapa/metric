@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/mbiwapa/metric/internal/logger"
 	"github.com/stretchr/testify/require"
 )
 
@@ -23,9 +24,9 @@ func TestClient_Send(t *testing.T) {
 		{
 			name: "Clietn Тест 1 - успешный тест",
 			args: args{
-				typ:   "counter",
+				typ:   "gauge",
 				name:  "test2",
-				value: "0.5676",
+				value: "0.5686",
 			},
 			wantErr: false,
 		},
@@ -52,7 +53,12 @@ func TestClient_Send(t *testing.T) {
 			}))
 			defer srv.Close()
 
-			c, err := New(srv.URL)
+			logger, err := logger.New("info")
+			if err != nil {
+				panic("Logger initialization error: " + err.Error())
+			}
+
+			c, err := New(srv.URL, logger)
 
 			require.NoError(t, err)
 
