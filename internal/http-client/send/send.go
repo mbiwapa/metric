@@ -3,7 +3,6 @@ package send
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"strconv"
 
@@ -74,8 +73,8 @@ func (c *Client) Send(typ string, name string, value string) error {
 	// c.Logger.Info("Response ready", zap.ByteString("response", b))
 	// defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		return errors.New(resp.Status)
-	}
+	// if resp.StatusCode != http.StatusOK {
+	// 	return errors.New(resp.Status)
+	// }
 	return nil
 }
