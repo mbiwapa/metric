@@ -21,7 +21,7 @@ type Client struct {
 func New(url string) (*Client, error) {
 	var client Client
 	client.URL = url
-	client.Client = &http.Client{}
+	client.Client = http.DefaultClient
 	return &client, nil
 }
 
@@ -60,7 +60,7 @@ func (c *Client) Send(typ string, name string, value string) error {
 	if err != nil {
 		return err
 	}
-
+	req.Close = true
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := c.Client.Do(req)
@@ -71,7 +71,6 @@ func (c *Client) Send(typ string, name string, value string) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		return errors.New(resp.Status)
