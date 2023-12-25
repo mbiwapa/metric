@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"strconv"
 
@@ -20,7 +21,7 @@ type Client struct {
 func New(url string) (*Client, error) {
 	var client Client
 	client.URL = url
-	client.Client = http.DefaultClient
+	client.Client = &http.Client{}
 	return &client, nil
 }
 
@@ -59,10 +60,14 @@ func (c *Client) Send(typ string, name string, value string) error {
 	if err != nil {
 		return err
 	}
-	req.Close = true
+
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := c.Client.Do(req)
+	if resp != nil {
+		_, _ = io.Copy(io.Discard, resp.Body)
+		_ = resp.Body.Close()
+	}
 	if err != nil {
 		return err
 	}
