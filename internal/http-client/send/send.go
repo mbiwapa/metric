@@ -14,16 +14,14 @@ import (
 // Client структура возвращаемая для работы, клиент
 type Client struct {
 	URL    string
-	Client *http.Client
+	Client http.Client
 }
 
 // New возвращает эксземпляр клиента
 func New(url string) (*Client, error) {
 	var client Client
 	client.URL = url
-	client.Client = &http.Client{
-		// Timeout: time.Duration(reportInterval) / 2,
-	}
+	client.Client = http.Client{}
 	return &client, nil
 }
 
