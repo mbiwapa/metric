@@ -21,6 +21,8 @@ type MetricSender interface {
 func Start(stor AllMetricGeter, sender MetricSender, reportInterval int64, logger *zap.Logger) {
 	logger.Info("Start Sender!")
 	for {
+		sleepSecond := time.Duration(reportInterval) * time.Second
+		time.Sleep(sleepSecond)
 		gauge, counter, err := stor.GetAllMetrics()
 		if err != nil {
 			//TODO error chanel
@@ -57,7 +59,5 @@ func Start(stor AllMetricGeter, sender MetricSender, reportInterval int64, logge
 				panic(err.Error())
 			}
 		}
-		sleepSecond := time.Duration(reportInterval) * time.Second
-		time.Sleep(sleepSecond)
 	}
 }
