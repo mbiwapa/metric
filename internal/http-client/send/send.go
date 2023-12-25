@@ -18,10 +18,12 @@ type Client struct {
 }
 
 // New возвращает эксземпляр клиента
-func New(url string) (*Client, error) {
+func New(url string, reportInterval int64) (*Client, error) {
 	var client Client
 	client.URL = url
-	client.Client = http.DefaultClient
+	client.Client = &http.Client{
+		// Timeout: time.Duration(reportInterval) / 2,
+	}
 	return &client, nil
 }
 
@@ -49,21 +51,13 @@ func (c *Client) Send(typ string, name string, value string) error {
 	default:
 	}
 
-	var data []byte
-	r := bytes.NewBuffer(data)
-	enc := json.NewEncoder(r)
-	if err := enc.Encode(body); err != nil {
-		return err
-	}
+	data, err := json.Marshal(body)
 
-	req, err := http.NewRequest("POST", c.URL+"/update/", r)
-	if err != nil {
-		return err
-	}
-	req.Close = true
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := c.Client.Do(req)
+	resp, err := c.Client.Post(
+		c.URL+"/update/",
+		"application/json",
+		bytes.NewReader(data),
+	)
 	if resp != nil {
 		_, _ = io.Copy(io.Discard, resp.Body)
 		_ = resp.Body.Close()
