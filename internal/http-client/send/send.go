@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"io"
 	"net/http"
 	"strconv"
 
@@ -67,10 +66,12 @@ func (c *Client) Send(typ string, name string, value string) error {
 
 	resp, err := c.Client.Do(req)
 	if err != nil {
+		//FIXME
 		// return err
 	}
-	b, err := io.ReadAll(resp.Body)
-	c.Logger.Info("Response ready", zap.ByteString("response", b))
+	//FIXME
+	// b, err := io.ReadAll(resp.Body)
+	// c.Logger.Info("Response ready", zap.ByteString("response", b))
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
