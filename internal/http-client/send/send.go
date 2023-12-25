@@ -20,9 +20,7 @@ type Client struct {
 func New(url string) (*Client, error) {
 	var client Client
 	client.URL = url
-	client.Client = &http.Client{
-		Transport: &http.Transport{},
-	}
+	client.Client = http.DefaultClient
 	return &client, nil
 }
 
