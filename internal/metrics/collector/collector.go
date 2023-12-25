@@ -3,6 +3,8 @@ package collector
 import (
 	"math/rand"
 	"time"
+
+	"go.uber.org/zap"
 )
 
 // MetricGeter interface for Metric repo
@@ -23,29 +25,50 @@ type ObservableMetric struct {
 }
 
 // Start запускает процесс сбора метрик
-func Start(repo MetricGeter, stor MetricUpdater, list []ObservableMetric, pollInterval int64) {
+func Start(repo MetricGeter, stor MetricUpdater, list []ObservableMetric, pollInterval int64, logger *zap.Logger) {
+	logger.Info("Start collector!")
 	for {
 		for _, metric := range list {
 			value, err := repo.MetricGet(metric.Name, metric.SourceType)
 			if err != nil {
 				//TODO error chanel
+				logger.Error(
+					"Cant get metric",
+					zap.String("type", metric.SourceType),
+					zap.String("name", metric.Name),
+					zap.Error(err))
 				panic("Metric no longer supported")
 			}
 			err = stor.UpdateGauge(metric.Name, value)
 			if err != nil {
 				//TODO error chanel
+				logger.Error(
+					"Cant update metric",
+					zap.String("type", metric.SourceType),
+					zap.String("name", metric.Name),
+					zap.Error(err))
 				panic("Storage unavailable!")
 			}
 		}
 		err := stor.UpdateGauge("RandomValue", rand.Float64())
 		if err != nil {
 			//TODO error chanel
+			logger.Error(
+				"Cant update metric",
+				zap.String("type", "gauge"),
+				zap.String("name", "RandomValue"),
+				zap.Error(err))
 			panic("Storage unavailable!")
 		}
 
 		err = stor.UpdateCounter("PollCount", 1)
 		if err != nil {
 			//TODO error chanel
+			logger.Error(
+				"Cant update metric",
+				zap.String("type", "couner"),
+				zap.String("name", "PollCount"),
+				zap.Error(err))
 			panic("Storage unavailable!")
 		}
 

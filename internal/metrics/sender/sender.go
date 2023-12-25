@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/mbiwapa/metric/internal/lib/api/format"
+	"go.uber.org/zap"
 )
 
 // AllMetricGeter interface for Metric repo
@@ -17,12 +18,14 @@ type MetricSender interface {
 }
 
 // Start запускает процесс отправки метрик раз в reportInterval секунд
-func Start(stor AllMetricGeter, sender MetricSender, reportInterval int64) {
+func Start(stor AllMetricGeter, sender MetricSender, reportInterval int64, logger *zap.Logger) {
+	logger.Info("Start Sender!")
 	for {
-
 		gauge, counter, err := stor.GetAllMetrics()
 		if err != nil {
 			//TODO error chanel
+			logger.Error(
+				"Cant get all metrics")
 			panic("Stor unavailable!")
 		}
 		for _, metric := range gauge {
@@ -30,6 +33,12 @@ func Start(stor AllMetricGeter, sender MetricSender, reportInterval int64) {
 			err = sender.Send(format.Gauge, metric[0], metric[1])
 			if err != nil {
 				//TODO error chanel
+				logger.Error(
+					"Cant send metric",
+					zap.String("type", format.Gauge),
+					zap.String("name", metric[0]),
+					zap.String("value", metric[1]),
+					zap.Error(err))
 				panic(err.Error())
 
 			}
@@ -39,6 +48,12 @@ func Start(stor AllMetricGeter, sender MetricSender, reportInterval int64) {
 			err = sender.Send(format.Counter, metric[0], metric[1])
 			if err != nil {
 				//TODO error chanel
+				logger.Error(
+					"Cant send metric",
+					zap.String("type", format.Counter),
+					zap.String("name", metric[0]),
+					zap.String("value", metric[1]),
+					zap.Error(err))
 				panic(err.Error())
 			}
 		}

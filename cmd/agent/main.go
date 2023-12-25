@@ -46,9 +46,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	go collector.Start(metricsRepo, storage, conf.ObservableMetrics, conf.PollInterval)
+	go collector.Start(metricsRepo, storage, conf.ObservableMetrics, conf.PollInterval, logger)
 
-	go sender.Start(storage, client, conf.ReportInterval)
+	go sender.Start(storage, client, conf.ReportInterval, logger)
 
 	//TODO переделать
 	time.Sleep(10 * time.Minute)
