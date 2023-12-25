@@ -3,12 +3,12 @@ package send
 import (
 	"bytes"
 	"encoding/json"
-	"io"
 	"net/http"
 	"strconv"
 
-	"github.com/mbiwapa/metric/internal/lib/api/format"
 	"go.uber.org/zap"
+
+	"github.com/mbiwapa/metric/internal/lib/api/format"
 )
 
 // Client структура возвращаемая для работы, клиент
@@ -43,12 +43,14 @@ func (c *Client) Send(typ string, name string, value string) error {
 	case format.Gauge:
 		val, err := strconv.ParseFloat(value, 64)
 		if err != nil {
+			c.Logger.Error("Cant parse gauge metric", zap.Error(err))
 			return err
 		}
 		body.Value = &val
 	case format.Counter:
 		val, err := strconv.ParseInt(value, 0, 64)
 		if err != nil {
+			c.Logger.Error("Cant parse counter metric", zap.Error(err))
 			return err
 		}
 		body.Delta = &val
@@ -56,29 +58,31 @@ func (c *Client) Send(typ string, name string, value string) error {
 	}
 
 	data, err := json.Marshal(body)
+	if err != nil {
+		c.Logger.Error("Cant encoding request", zap.Error(err))
+		return err
+	}
 	c.Logger.Info("JSON ready", zap.ByteString("json", data))
 
 	req, err := http.NewRequest("POST", c.URL+"/update/", bytes.NewReader(data))
-	req.Close = true // Close the connection after sending the request
 	if err != nil {
+		c.Logger.Error("Cant create request", zap.Error(err))
 		return err
 	}
+	req.Close = true // Close the connection after sending the request
 
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := c.Client.Do(req)
 	//FIXME именно в автотестах клиент периодически ловит EOF и отваливается
 	//FIXME как правило на первый же запрос, но потом приходит в себя, (Уточнить у ментора)
+	//TODO судя по всему сервер просто долго поднимается.... убил на это больше 5 часов
 	if err != nil {
 		c.Logger.Error("Cant send metric", zap.Error(err))
 	}
 
 	if resp != nil {
-		var byteResponse []byte
-		byteResponse, err = io.ReadAll(resp.Body)
-		c.Logger.Info("Response ready", zap.ByteString("response", byteResponse))
 		defer resp.Body.Close()
-
 		if resp.StatusCode != http.StatusOK {
 			c.Logger.Error("Cant send metric", zap.String("error", resp.Status))
 		}
