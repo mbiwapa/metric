@@ -64,6 +64,7 @@ func (c *Client) Send(typ string, name string, value string) error {
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := c.Client.Do(req)
+	_ = resp
 	if err != nil {
 		//FIXME
 		// return err
