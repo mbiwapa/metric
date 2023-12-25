@@ -65,8 +65,8 @@ func (c *Client) Send(typ string, name string, value string) error {
 
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
+	resp, err := c.Client.Do(req)
+	if err != nil && err != io.EOF {
 		return err
 	}
 	b, err := io.ReadAll(resp.Body)
