@@ -55,7 +55,7 @@ func (c *Client) Send(typ string, name string, value string) error {
 		return err
 	}
 
-	req, err := http.NewRequest("POST", c.URL+"/update", r)
+	req, err := http.NewRequest("POST", c.URL+"/update/", r)
 	if err != nil {
 		return err
 	}
