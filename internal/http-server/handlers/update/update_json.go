@@ -61,5 +61,6 @@ func NewJSON(log *zap.Logger, storage Updater) http.HandlerFunc {
 			log.Error("Error encoding response", zap.Error(err))
 			return
 		}
+		w.WriteHeader(http.StatusOK)
 	}
 }
