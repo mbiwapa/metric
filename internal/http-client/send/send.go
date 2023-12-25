@@ -72,7 +72,7 @@ func (c *Client) Send(typ string, name string, value string) error {
 	//FIXME
 	// b, err := io.ReadAll(resp.Body)
 	// c.Logger.Info("Response ready", zap.ByteString("response", b))
-	defer resp.Body.Close()
+	// defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		return errors.New(resp.Status)
