@@ -14,14 +14,14 @@ import (
 // Client структура возвращаемая для работы, клиент
 type Client struct {
 	URL    string
-	Client http.Client
+	Client *http.Client
 }
 
 // New возвращает эксземпляр клиента
 func New(url string) (*Client, error) {
 	var client Client
 	client.URL = url
-	client.Client = http.Client{}
+	client.Client = &http.Client{}
 	return &client, nil
 }
 
@@ -51,11 +51,16 @@ func (c *Client) Send(typ string, name string, value string) error {
 
 	data, err := json.Marshal(body)
 
-	resp, err := c.Client.Post(
-		c.URL+"/update/",
-		"application/json",
-		bytes.NewReader(data),
-	)
+	req, err := http.NewRequest("POST", c.URL+"/update/", bytes.NewReader(data))
+	req.Close = true // Close the connection after sending the request
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+
 	if resp != nil {
 		_, _ = io.Copy(io.Discard, resp.Body)
 		_ = resp.Body.Close()
@@ -63,6 +68,7 @@ func (c *Client) Send(typ string, name string, value string) error {
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		return errors.New(resp.Status)
