@@ -66,11 +66,11 @@ func (c *Client) Send(typ string, name string, value string) error {
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := http.DefaultClient.Do(req)
-	b, err := io.ReadAll(resp.Body)
-	c.Logger.Info("Response ready", zap.ByteString("response", b))
 	if err != nil {
 		return err
 	}
+	b, err := io.ReadAll(resp.Body)
+	c.Logger.Info("Response ready", zap.ByteString("response", b))
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
