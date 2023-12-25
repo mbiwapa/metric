@@ -18,7 +18,7 @@ type Client struct {
 }
 
 // New возвращает эксземпляр клиента
-func New(url string, reportInterval int64) (*Client, error) {
+func New(url string) (*Client, error) {
 	var client Client
 	client.URL = url
 	client.Client = &http.Client{
