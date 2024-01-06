@@ -6,7 +6,7 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/mbiwapa/metric/internal/metrics/collector"
+	"github.com/mbiwapa/metric/internal/agent/collector"
 )
 
 // Config Структура со всеми конфигурациями сервера
