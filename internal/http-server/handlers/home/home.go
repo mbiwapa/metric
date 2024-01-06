@@ -47,6 +47,7 @@ func New(log *zap.Logger, storage AllMetricGeter) http.HandlerFunc {
 		}
 
 		body += "</ul></body></html>"
+		w.Header().Set("Content-Type", "text/html")
 
 		w.Write([]byte(body))
 	}

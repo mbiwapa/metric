@@ -25,18 +25,18 @@ func (compressor Compressor) GetCompressedData(data []byte) (io.Reader, error) {
 	b := new(bytes.Buffer)
 	w, err := gzip.NewWriterLevel(b, gzip.BestSpeed)
 	if err != nil {
-		compressor.Logger.Error("error init gzip writer")
+		compressor.Logger.Error("error init gzip writer", zap.Error(err))
 		return nil, err
 	}
 	_, err = w.Write(data)
 	if err != nil {
-		compressor.Logger.Error("error compressing data")
+		compressor.Logger.Error("error compressing data", zap.Error(err))
 		return nil, err
 	}
 	err = w.Close()
 	w.Reset(b)
 	if err != nil {
-		compressor.Logger.Error("error closing writer")
+		compressor.Logger.Error("error closing writer", zap.Error(err))
 		return nil, err
 	}
 

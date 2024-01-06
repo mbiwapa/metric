@@ -61,9 +61,13 @@ func (c *Client) Send(typ string, name string, value string) error {
 	}
 
 	data, err := json.Marshal(body)
-	compressedData, err := c.Compressor.GetCompressedData(data)
 	if err != nil {
 		c.Logger.Error("Cant encoding request", zap.Error(err))
+		return err
+	}
+	compressedData, err := c.Compressor.GetCompressedData(data)
+	if err != nil {
+		c.Logger.Error("Cant initializing compressed reader", zap.Error(err))
 		return err
 	}
 	c.Logger.Info("JSON ready", zap.ByteString("json", data))
