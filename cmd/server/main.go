@@ -12,6 +12,7 @@ import (
 	"github.com/mbiwapa/metric/internal/http-server/handlers/home"
 	"github.com/mbiwapa/metric/internal/http-server/handlers/update"
 	"github.com/mbiwapa/metric/internal/http-server/handlers/value"
+	"github.com/mbiwapa/metric/internal/http-server/middleware/decompressor"
 	mwLogger "github.com/mbiwapa/metric/internal/http-server/middleware/logger"
 	"github.com/mbiwapa/metric/internal/logger"
 	"github.com/mbiwapa/metric/internal/storage/memstorage"
@@ -41,6 +42,8 @@ func main() {
 	router.Use(middleware.RequestID)
 	router.Use(mwLogger.New(logger))
 	router.Use(middleware.URLFormat)
+	router.Use(middleware.Compress(5, "application/json", "text/html"))
+	router.Use(decompressor.New(logger))
 
 	router.Route("/update", func(r chi.Router) {
 		r.Post("/", undefinedType)
