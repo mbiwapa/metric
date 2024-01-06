@@ -4,12 +4,12 @@ import (
 	"os"
 	"time"
 
+	"github.com/mbiwapa/metric/internal/agent/client"
+	"github.com/mbiwapa/metric/internal/agent/collector"
+	"github.com/mbiwapa/metric/internal/agent/sender"
+	"github.com/mbiwapa/metric/internal/agent/source/memstats"
 	config "github.com/mbiwapa/metric/internal/config/client"
-	"github.com/mbiwapa/metric/internal/http-client/send"
 	"github.com/mbiwapa/metric/internal/logger"
-	"github.com/mbiwapa/metric/internal/metrics/collector"
-	"github.com/mbiwapa/metric/internal/metrics/sender"
-	"github.com/mbiwapa/metric/internal/metrics/source/memstats"
 	"github.com/mbiwapa/metric/internal/storage/memstorage"
 	"go.uber.org/zap"
 )
@@ -40,7 +40,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	client, err := send.New(conf.Addr, logger)
+	client, err := client.New(conf.Addr, logger)
 	if err != nil {
 		logger.Error("Dont create http client", zap.Error(err))
 		os.Exit(1)

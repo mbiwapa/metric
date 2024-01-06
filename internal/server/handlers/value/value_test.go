@@ -10,8 +10,8 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"github.com/mbiwapa/metric/internal/http-server/handlers/value/mocks"
 	"github.com/mbiwapa/metric/internal/logger"
+	"github.com/mbiwapa/metric/internal/server/handlers/value/mocks"
 )
 
 func TestNew(t *testing.T) {

@@ -1,4 +1,4 @@
-package send
+package client
 
 import (
 	"encoding/json"
@@ -7,7 +7,7 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/mbiwapa/metric/internal/http-client/compressor"
+	"github.com/mbiwapa/metric/internal/agent/compressor"
 	"github.com/mbiwapa/metric/internal/lib/api/format"
 )
 
@@ -37,7 +37,7 @@ func (c *Client) Send(typ string, name string, value string) error {
 	const op = "http-client.send.Send"
 	c.Logger.With(zap.String("op", op))
 
-	body := format.Metrics{
+	body := format.Metric{
 		MType: typ,
 		ID:    name,
 	}

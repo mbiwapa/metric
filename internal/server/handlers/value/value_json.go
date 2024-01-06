@@ -22,7 +22,7 @@ func NewJSON(log *zap.Logger, storage MetricGeter) http.HandlerFunc {
 			zap.String("request_id", middleware.GetReqID(r.Context())),
 		)
 
-		var metricRequest format.Metrics
+		var metricRequest format.Metric
 
 		dec := json.NewDecoder(r.Body)
 		if err := dec.Decode(&metricRequest); err != nil {

@@ -11,8 +11,8 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"github.com/mbiwapa/metric/internal/http-server/handlers/update/mocks"
 	"github.com/mbiwapa/metric/internal/logger"
+	"github.com/mbiwapa/metric/internal/server/handlers/update/mocks"
 )
 
 func TestNew(t *testing.T) {
@@ -118,6 +118,8 @@ func TestNew(t *testing.T) {
 
 			UpdaterMock := mocks.NewUpdater(t)
 
+			BackuperMock := mocks.NewBackuper(t)
+
 			if tt.wantStatus == http.StatusOK || tt.mockError != nil {
 				if tt.typ == "gauge" {
 					UpdaterMock.On("UpdateGauge", mock.AnythingOfType("string"), mock.AnythingOfType("float64")).
@@ -130,6 +132,9 @@ func TestNew(t *testing.T) {
 						Once()
 				}
 			}
+			if tt.wantStatus == http.StatusOK {
+				BackuperMock.On("IsSyncMode").Return(false).Once()
+			}
 
 			logger, err := logger.New("info")
 			if err != nil {
@@ -138,7 +143,7 @@ func TestNew(t *testing.T) {
 
 			r := chi.NewRouter()
 			r.Use(middleware.URLFormat)
-			r.Post("/update/{type}/{name}/{value}", New(logger, UpdaterMock))
+			r.Post("/update/{type}/{name}/{value}", New(logger, UpdaterMock, BackuperMock))
 			ts := httptest.NewServer(r)
 			defer ts.Close()
 

@@ -19,8 +19,17 @@ type Updater interface {
 	UpdateCounter(key string, value int64) error
 }
 
+// Backuper interface for backuper
+//
+//go:generate go run github.com/vektra/mockery/v2@v2.28.2 --name=Backuper
+type Backuper interface {
+	SaveToStruct(typ string, name string, value string) error
+	SaveToFile()
+	IsSyncMode() bool
+}
+
 // New returned func for update
-func New(log *zap.Logger, storage Updater) http.HandlerFunc {
+func New(log *zap.Logger, storage Updater, backup Backuper) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		const op = "handlers.update.New"
@@ -79,6 +88,11 @@ func New(log *zap.Logger, storage Updater) http.HandlerFunc {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 
+		}
+
+		if backup.IsSyncMode() {
+			backup.SaveToStruct(typ, name, value)
+			backup.SaveToFile()
 		}
 
 		w.WriteHeader(http.StatusOK)

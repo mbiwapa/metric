@@ -9,12 +9,13 @@ import (
 	"go.uber.org/zap"
 
 	config "github.com/mbiwapa/metric/internal/config/server"
-	"github.com/mbiwapa/metric/internal/http-server/handlers/home"
-	"github.com/mbiwapa/metric/internal/http-server/handlers/update"
-	"github.com/mbiwapa/metric/internal/http-server/handlers/value"
-	"github.com/mbiwapa/metric/internal/http-server/middleware/decompressor"
-	mwLogger "github.com/mbiwapa/metric/internal/http-server/middleware/logger"
 	"github.com/mbiwapa/metric/internal/logger"
+	"github.com/mbiwapa/metric/internal/server/backuper"
+	"github.com/mbiwapa/metric/internal/server/handlers/home"
+	"github.com/mbiwapa/metric/internal/server/handlers/update"
+	"github.com/mbiwapa/metric/internal/server/handlers/value"
+	"github.com/mbiwapa/metric/internal/server/middleware/decompressor"
+	mwLogger "github.com/mbiwapa/metric/internal/server/middleware/logger"
 	"github.com/mbiwapa/metric/internal/storage/memstorage"
 )
 
@@ -34,22 +35,42 @@ func main() {
 	if err != nil {
 		logger.Error("Can't create storage", zap.Error(err))
 		os.Exit(1)
+	}
 
+	backup, err := backuper.New(
+		storage,
+		config.StoreInterval,
+		config.StoragePath,
+		logger)
+	if err != nil {
+		logger.Error("Can't create saver", zap.Error(err))
+		os.Exit(1)
+	}
+	defer backup.SaveToFile()
+
+	if config.Restore {
+		backup.Restore()
+	}
+
+	if config.StoreInterval > 0 {
+		go backup.Start()
 	}
 
 	router := chi.NewRouter()
 
-	router.Use(middleware.RequestID)
-	router.Use(mwLogger.New(logger))
-	router.Use(middleware.URLFormat)
-	router.Use(middleware.Compress(5, "application/json", "text/html"))
-	router.Use(decompressor.New(logger))
+	router.Use(
+		middleware.RequestID,
+		mwLogger.New(logger),
+		middleware.URLFormat,
+		middleware.Compress(5, "application/json", "text/html"),
+		decompressor.New(logger),
+	)
 
 	router.Route("/update", func(r chi.Router) {
 		r.Post("/", undefinedType)
-		r.Post("/{type}/{name}/{value}", update.New(logger, storage))
+		r.Post("/{type}/{name}/{value}", update.New(logger, storage, backup))
 	})
-	router.Post("/update/", update.NewJSON(logger, storage))
+	router.Post("/update/", update.NewJSON(logger, storage, backup))
 	router.Get("/value/{type}/{name}", value.New(logger, storage))
 	router.Post("/value/", value.NewJSON(logger, storage))
 	router.Get("/", home.New(logger, storage))

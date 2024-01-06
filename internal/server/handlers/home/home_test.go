@@ -10,8 +10,8 @@ import (
 	"github.com/go-chi/chi/middleware"
 	"github.com/stretchr/testify/require"
 
-	"github.com/mbiwapa/metric/internal/http-server/handlers/home/mocks"
 	"github.com/mbiwapa/metric/internal/logger"
+	"github.com/mbiwapa/metric/internal/server/handlers/home/mocks"
 )
 
 func TestNew(t *testing.T) {
