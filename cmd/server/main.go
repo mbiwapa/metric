@@ -2,42 +2,67 @@ package main
 
 import (
 	"net/http"
+	"os"
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
+	"go.uber.org/zap"
 
 	config "github.com/mbiwapa/metric/internal/config/server"
 	"github.com/mbiwapa/metric/internal/http-server/handlers/home"
 	"github.com/mbiwapa/metric/internal/http-server/handlers/update"
 	"github.com/mbiwapa/metric/internal/http-server/handlers/value"
+	"github.com/mbiwapa/metric/internal/http-server/middleware/decompressor"
+	mwLogger "github.com/mbiwapa/metric/internal/http-server/middleware/logger"
+	"github.com/mbiwapa/metric/internal/logger"
 	"github.com/mbiwapa/metric/internal/storage/memstorage"
 )
 
 func main() {
-	conf := config.MustLoadConfig()
+
+	config := config.MustLoadConfig()
+
+	logger, err := logger.New("info")
+
+	if err != nil {
+		panic("Logger initialization error: " + err.Error())
+	}
+
+	logger.Info("Start service!")
 
 	storage, err := memstorage.New()
 	if err != nil {
-		panic("Storage unavailable!")
+		logger.Error("Can't create storage", zap.Error(err))
+		os.Exit(1)
+
 	}
 
 	router := chi.NewRouter()
+
+	router.Use(middleware.RequestID)
+	router.Use(mwLogger.New(logger))
 	router.Use(middleware.URLFormat)
+	router.Use(middleware.Compress(5, "application/json", "text/html"))
+	router.Use(decompressor.New(logger))
+
 	router.Route("/update", func(r chi.Router) {
 		r.Post("/", undefinedType)
-		r.Post("/{type}/{name}/{value}", update.New(storage))
+		r.Post("/{type}/{name}/{value}", update.New(logger, storage))
 	})
-	router.Get("/value/{type}/{name}", value.New(storage))
-	router.Get("/", home.New(storage))
+	router.Post("/update/", update.NewJSON(logger, storage))
+	router.Get("/value/{type}/{name}", value.New(logger, storage))
+	router.Post("/value/", value.NewJSON(logger, storage))
+	router.Get("/", home.New(logger, storage))
 
 	srv := &http.Server{
-		Addr:    conf.Addr,
+		Addr:    config.Addr,
 		Handler: router,
 	}
 
 	err = srv.ListenAndServe()
 	if err != nil {
-		panic("The server did not start!")
+		logger.Error("The server did not start!", zap.Error(err))
+		os.Exit(1)
 	}
 }
 
