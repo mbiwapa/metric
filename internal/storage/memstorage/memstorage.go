@@ -1,8 +1,10 @@
 package memstorage
 
 import (
-	"errors"
 	"strconv"
+
+	"github.com/mbiwapa/metric/internal/lib/api/format"
+	"github.com/mbiwapa/metric/internal/storage"
 )
 
 // MemStorage Структура для хранения метрик
@@ -29,8 +31,8 @@ func New() (*MemStorage, error) {
 	return &storage, nil
 }
 
-// GaugeUpdate saves the given Gauge metric to the memory.
-func (s *MemStorage) GaugeUpdate(key string, value float64) error {
+// UpdateGauge saves the given Gauge metric to the memory.
+func (s *MemStorage) UpdateGauge(key string, value float64) error {
 
 	changed := false
 	for i := 0; i < len(s.Gauge); i++ {
@@ -50,8 +52,8 @@ func (s *MemStorage) GaugeUpdate(key string, value float64) error {
 	return nil
 }
 
-// CounterUpdate saves the given Counter metric to the memory.
-func (s *MemStorage) CounterUpdate(key string, value int64) error {
+// UpdateCounter saves the given Counter metric to the memory.
+func (s *MemStorage) UpdateCounter(key string, value int64) error {
 	changed := false
 	for i := 0; i < len(s.Counter); i++ {
 		if s.Counter[i].Name == key {
@@ -87,14 +89,14 @@ func (s *MemStorage) GetAllMetrics() ([][]string, [][]string, error) {
 
 // GetMetric Возвращает метрику по ключу
 func (s *MemStorage) GetMetric(typ string, key string) (string, error) {
-	if typ == "gauge" {
+	if typ == format.Gauge {
 		for _, metric := range s.Gauge {
 			if metric.Name == key {
 				return strconv.FormatFloat(metric.Value, 'f', -1, 64), nil
 			}
 		}
 	}
-	if typ == "counter" {
+	if typ == format.Counter {
 		for _, metric := range s.Counter {
 			if metric.Name == key {
 				return strconv.FormatInt(metric.Value, 10), nil
@@ -102,5 +104,5 @@ func (s *MemStorage) GetMetric(typ string, key string) (string, error) {
 		}
 	}
 
-	return "", errors.New("metric not found")
+	return "", storage.ErrMetricNotFound
 }
