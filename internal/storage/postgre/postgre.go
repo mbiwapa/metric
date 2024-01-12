@@ -21,7 +21,7 @@ func New(dsn string) (*PgStorage, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
-	defer db.Close()
+	// defer db.Close()
 
 	return &PgStorage{db: db}, nil
 }
@@ -36,4 +36,9 @@ func (s *PgStorage) Ping(ctx context.Context) error {
 		return fmt.Errorf("%s: %w", op, err)
 	}
 	return nil
+}
+
+// Close closes the connection to the database
+func (s *PgStorage) Close() {
+	s.db.Close()
 }

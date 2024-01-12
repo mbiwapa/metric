@@ -40,6 +40,7 @@ func main() {
 	}
 
 	pgstorage, err := postgre.New(config.DatabaseDSN)
+	defer pgstorage.Close()
 	if err != nil {
 		logger.Error("Can't create postgree storage", zap.Error(err))
 		os.Exit(1)
