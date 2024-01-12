@@ -12,6 +12,7 @@ type Config struct {
 	StoreInterval int64
 	StoragePath   string
 	Restore       bool
+	DatabaseDSN   string
 }
 
 // MustLoadConfig загрузка конфигурации
@@ -21,6 +22,7 @@ func MustLoadConfig() *Config {
 	flag.Int64Var(&config.StoreInterval, "i", 300, "Интервал времени в секундах, по истечении которого текущие показания сервера сохраняются на диск")
 	flag.StringVar(&config.StoragePath, "f", "/tmp/metrics-db.json", "Полное имя файла, куда сохраняются текущие значения")
 	flag.BoolVar(&config.Restore, "r", true, "Загружать или нет ранее сохранённые значения из указанного файла при старте сервера")
+	flag.StringVar(&config.DatabaseDSN, "d", "user=postgres password=postgres host=localhost port=5432 database=postgres sslmode=disable", "DSN строка для соединения с базой данных")
 	flag.Parse()
 
 	envAddr := os.Getenv("ADDRESS")
@@ -43,6 +45,11 @@ func MustLoadConfig() *Config {
 	if restore != "" {
 		b, _ := strconv.ParseBool(restore)
 		config.Restore = b
+	}
+
+	databaseDSN := os.Getenv("DATABASE_DSN")
+	if databaseDSN != "" {
+		config.DatabaseDSN = databaseDSN
 	}
 
 	return &config

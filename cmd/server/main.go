@@ -12,11 +12,13 @@ import (
 	"github.com/mbiwapa/metric/internal/logger"
 	"github.com/mbiwapa/metric/internal/server/backuper"
 	"github.com/mbiwapa/metric/internal/server/handlers/home"
+	"github.com/mbiwapa/metric/internal/server/handlers/ping"
 	"github.com/mbiwapa/metric/internal/server/handlers/update"
 	"github.com/mbiwapa/metric/internal/server/handlers/value"
 	"github.com/mbiwapa/metric/internal/server/middleware/decompressor"
 	mwLogger "github.com/mbiwapa/metric/internal/server/middleware/logger"
 	"github.com/mbiwapa/metric/internal/storage/memstorage"
+	"github.com/mbiwapa/metric/internal/storage/postgre"
 )
 
 func main() {
@@ -34,6 +36,12 @@ func main() {
 	storage, err := memstorage.New()
 	if err != nil {
 		logger.Error("Can't create storage", zap.Error(err))
+		os.Exit(1)
+	}
+
+	pgstorage, err := postgre.New(config.DatabaseDSN)
+	if err != nil {
+		logger.Error("Can't create postgree storage", zap.Error(err))
 		os.Exit(1)
 	}
 
@@ -74,6 +82,8 @@ func main() {
 	router.Get("/value/{type}/{name}", value.New(logger, storage))
 	router.Post("/value/", value.NewJSON(logger, storage))
 	router.Get("/", home.New(logger, storage))
+
+	router.Get("/ping", ping.New(logger, pgstorage))
 
 	srv := &http.Server{
 		Addr:    config.Addr,
