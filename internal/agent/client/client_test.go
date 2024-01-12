@@ -5,8 +5,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/mbiwapa/metric/internal/logger"
 	"github.com/stretchr/testify/require"
+
+	"github.com/mbiwapa/metric/internal/logger"
 )
 
 func TestClient_Send(t *testing.T) {

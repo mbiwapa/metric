@@ -4,6 +4,8 @@ import (
 	"os"
 	"time"
 
+	"go.uber.org/zap"
+
 	"github.com/mbiwapa/metric/internal/agent/client"
 	"github.com/mbiwapa/metric/internal/agent/collector"
 	"github.com/mbiwapa/metric/internal/agent/sender"
@@ -11,7 +13,6 @@ import (
 	config "github.com/mbiwapa/metric/internal/config/client"
 	"github.com/mbiwapa/metric/internal/logger"
 	"github.com/mbiwapa/metric/internal/storage/memstorage"
-	"go.uber.org/zap"
 )
 
 func main() {

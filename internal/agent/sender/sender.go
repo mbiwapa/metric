@@ -3,8 +3,9 @@ package sender
 import (
 	"time"
 
-	"github.com/mbiwapa/metric/internal/lib/api/format"
 	"go.uber.org/zap"
+
+	"github.com/mbiwapa/metric/internal/lib/api/format"
 )
 
 // AllMetricGeter interface for Metric repo

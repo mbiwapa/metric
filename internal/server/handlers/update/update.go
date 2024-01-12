@@ -7,8 +7,9 @@ import (
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
-	"github.com/mbiwapa/metric/internal/lib/api/format"
 	"go.uber.org/zap"
+
+	"github.com/mbiwapa/metric/internal/lib/api/format"
 )
 
 // Updater interface for storage

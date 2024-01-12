@@ -7,12 +7,13 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi/middleware"
+	"go.uber.org/zap"
+
 	"github.com/mbiwapa/metric/internal/lib/api/format"
 	storageErrors "github.com/mbiwapa/metric/internal/storage"
-	"go.uber.org/zap"
 )
 
-// New возвращает обработчик для вывода метрики
+// NewJSON возвращает обработчик для вывода метрики
 func NewJSON(log *zap.Logger, storage MetricGeter) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {

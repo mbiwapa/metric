@@ -6,8 +6,9 @@ import (
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
-	storageErrors "github.com/mbiwapa/metric/internal/storage"
 	"go.uber.org/zap"
+
+	storageErrors "github.com/mbiwapa/metric/internal/storage"
 )
 
 // MetricGeter interface for storage
