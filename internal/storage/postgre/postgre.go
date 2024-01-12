@@ -21,7 +21,6 @@ func New(dsn string) (*PgStorage, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
-	// defer db.Close()
 
 	return &PgStorage{db: db}, nil
 }
