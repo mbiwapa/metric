@@ -1,9 +1,11 @@
 package update
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
@@ -16,8 +18,8 @@ import (
 //
 //go:generate go run github.com/vektra/mockery/v2@v2.28.2 --name=Updater
 type Updater interface {
-	UpdateGauge(key string, value float64) error
-	UpdateCounter(key string, value int64) error
+	UpdateGauge(ctx context.Context, key string, value float64) error
+	UpdateCounter(ctx context.Context, key string, value int64) error
 }
 
 // Backuper interface for backuper
@@ -35,16 +37,14 @@ func New(log *zap.Logger, storage Updater, backup Backuper) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const op = "handlers.update.New"
 
+		ctx := r.Context()
 		log.With(
 			zap.String("op", op),
-			zap.String("request_id", middleware.GetReqID(r.Context())),
+			zap.String("request_id", middleware.GetReqID(ctx)),
 		)
 
 		name := chi.URLParam(r, "name")
 		typ := chi.URLParam(r, "type")
-
-		// value := chi.URLParam(r, "value")
-		//TODO от chi не работает, режет по . и не принимает float
 		value := strings.TrimPrefix(r.URL.Path, "/update/"+typ+"/"+name+"/")
 
 		if name == "" || value == "" {
@@ -57,6 +57,9 @@ func New(log *zap.Logger, storage Updater, backup Backuper) http.HandlerFunc {
 			return
 		}
 
+		databaseCtx, cancel := context.WithTimeout(ctx, 1*time.Second)
+		defer cancel()
+
 		switch typ {
 		case format.Gauge:
 			val, err := strconv.ParseFloat(value, 64)
@@ -65,7 +68,7 @@ func New(log *zap.Logger, storage Updater, backup Backuper) http.HandlerFunc {
 				w.WriteHeader(http.StatusBadRequest)
 				return
 			}
-			err = storage.UpdateGauge(name, val)
+			err = storage.UpdateGauge(databaseCtx, name, val)
 			if err != nil {
 				log.Error("Failed to update gauge value", zap.Error(err))
 				w.WriteHeader(http.StatusBadRequest)
@@ -78,7 +81,7 @@ func New(log *zap.Logger, storage Updater, backup Backuper) http.HandlerFunc {
 				w.WriteHeader(http.StatusBadRequest)
 				return
 			}
-			err = storage.UpdateCounter(name, val)
+			err = storage.UpdateCounter(databaseCtx, name, val)
 			if err != nil {
 				log.Error("Failed to update counter value", zap.Error(err))
 				w.WriteHeader(http.StatusBadRequest)

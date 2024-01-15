@@ -22,7 +22,7 @@ func MustLoadConfig() *Config {
 	flag.Int64Var(&config.StoreInterval, "i", 300, "Интервал времени в секундах, по истечении которого текущие показания сервера сохраняются на диск")
 	flag.StringVar(&config.StoragePath, "f", "/tmp/metrics-db.json", "Полное имя файла, куда сохраняются текущие значения")
 	flag.BoolVar(&config.Restore, "r", true, "Загружать или нет ранее сохранённые значения из указанного файла при старте сервера")
-	flag.StringVar(&config.DatabaseDSN, "d", "user=postgres password=postgres host=localhost port=5432 database=postgres sslmode=disable", "DSN строка для соединения с базой данных")
+	flag.StringVar(&config.DatabaseDSN, "d", "", "DSN строка для соединения с базой данных") //user=postgres password=postgres host=localhost port=5432 database=postgres sslmode=disable
 	flag.Parse()
 
 	envAddr := os.Getenv("ADDRESS")

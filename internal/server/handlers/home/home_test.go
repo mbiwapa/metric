@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/mbiwapa/metric/internal/logger"
@@ -48,7 +49,7 @@ func TestNew(t *testing.T) {
 			AllMetricGeterMock := mocks.NewAllMetricGeter(t)
 
 			if tt.wantStatus == http.StatusOK || tt.mockError != nil {
-				AllMetricGeterMock.On("GetAllMetrics").
+				AllMetricGeterMock.On("GetAllMetrics", mock.Anything).
 					Return(tt.wantMetrics, tt.wantMetrics, tt.mockError).
 					Once()
 			}

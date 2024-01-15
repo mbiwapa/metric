@@ -1,10 +1,12 @@
 package value
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/middleware"
 	"go.uber.org/zap"
@@ -18,9 +20,11 @@ func NewJSON(log *zap.Logger, storage MetricGeter) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		const op = "handlers.value.NewJSON"
+
+		ctx := r.Context()
 		log.With(
 			zap.String("op", op),
-			zap.String("request_id", middleware.GetReqID(r.Context())),
+			zap.String("request_id", middleware.GetReqID(ctx)),
 		)
 
 		var metricRequest format.Metric
@@ -42,7 +46,10 @@ func NewJSON(log *zap.Logger, storage MetricGeter) http.HandlerFunc {
 			return
 		}
 
-		value, err := storage.GetMetric(metricRequest.MType, metricRequest.ID)
+		databaseCtx, cancel := context.WithTimeout(ctx, 1*time.Second)
+		defer cancel()
+
+		value, err := storage.GetMetric(databaseCtx, metricRequest.MType, metricRequest.ID)
 		if errors.Is(err, storageErrors.ErrMetricNotFound) {
 			log.Info(
 				"Metric is not found",

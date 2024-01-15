@@ -1,6 +1,7 @@
 package sender
 
 import (
+	"context"
 	"time"
 
 	"go.uber.org/zap"
@@ -10,7 +11,7 @@ import (
 
 // AllMetricGeter interface for Metric repo
 type AllMetricGeter interface {
-	GetAllMetrics() ([][]string, [][]string, error)
+	GetAllMetrics(ctx context.Context) ([][]string, [][]string, error)
 }
 
 // MetricSender interface for sender
@@ -21,8 +22,11 @@ type MetricSender interface {
 // Start запускает процесс отправки метрик раз в reportInterval секунд
 func Start(stor AllMetricGeter, sender MetricSender, reportInterval int64, logger *zap.Logger) {
 	logger.Info("Start Sender!")
+	ctx := context.Background()
 	for {
-		gauge, counter, err := stor.GetAllMetrics()
+		databaseCtx, cancel := context.WithTimeout(ctx, 1*time.Second)
+		defer cancel()
+		gauge, counter, err := stor.GetAllMetrics(databaseCtx)
 		if err != nil {
 			//TODO error chanel
 			logger.Error(

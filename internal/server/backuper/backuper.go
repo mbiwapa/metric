@@ -1,6 +1,7 @@
 package backuper
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"strconv"
@@ -13,9 +14,9 @@ import (
 
 // AllMetricGeter interface for Metric repo
 type AllMetricGeter interface {
-	GetAllMetrics() ([][]string, [][]string, error)
-	UpdateGauge(key string, value float64) error
-	UpdateCounter(key string, value int64) error
+	GetAllMetrics(ctx context.Context) ([][]string, [][]string, error)
+	UpdateGauge(ctx context.Context, key string, value float64) error
+	UpdateCounter(ctx context.Context, key string, value int64) error
 }
 
 // metrics struct all metrics
@@ -49,13 +50,16 @@ func (s *Buckuper) Start() {
 	const op = "server.saver.Start"
 	s.logger.With(zap.String("op", op))
 	s.logger.Info("Start Saver!")
+	ctx := context.Background()
 
 	for {
 		s.logger.Info("Sleep " + strconv.FormatInt(s.storeInterval, 10) + " seconds")
 		sleepSecond := time.Duration(s.storeInterval) * time.Second
 		time.Sleep(sleepSecond)
 
-		gauge, counter, err := s.storage.GetAllMetrics()
+		databaseCtx, cancel := context.WithTimeout(ctx, 1*time.Second)
+		defer cancel()
+		gauge, counter, err := s.storage.GetAllMetrics(databaseCtx)
 		if err != nil {
 			//TODO error chanel
 			s.logger.Error("Cant get all metrics", zap.Error(err))
@@ -157,6 +161,8 @@ func (s *Buckuper) Restore() {
 	s.logger.With(zap.String("op", op))
 	s.logger.Info("Start Restore!")
 
+	ctx := context.Background()
+
 	data, err := os.ReadFile(s.storagePath)
 	if err != nil {
 		s.logger.Error(
@@ -170,14 +176,16 @@ func (s *Buckuper) Restore() {
 	}
 
 	for _, sourceMetric := range s.metrics {
+		databaseCtx, cancel := context.WithTimeout(ctx, 1*time.Second)
+		defer cancel()
 		switch sourceMetric.MType {
 		case format.Gauge:
-			err = s.storage.UpdateGauge(sourceMetric.ID, *sourceMetric.Value)
+			err = s.storage.UpdateGauge(databaseCtx, sourceMetric.ID, *sourceMetric.Value)
 			if err != nil {
 				s.logger.Error("Failed to update gauge value", zap.Error(err))
 			}
 		case format.Counter:
-			err = s.storage.UpdateCounter(sourceMetric.ID, *sourceMetric.Delta)
+			err = s.storage.UpdateCounter(databaseCtx, sourceMetric.ID, *sourceMetric.Delta)
 			if err != nil {
 				s.logger.Error("Failed to update counter value", zap.Error(err))
 			}

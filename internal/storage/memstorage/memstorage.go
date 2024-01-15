@@ -1,14 +1,15 @@
 package memstorage
 
 import (
+	"context"
 	"strconv"
 
 	"github.com/mbiwapa/metric/internal/lib/api/format"
 	"github.com/mbiwapa/metric/internal/storage"
 )
 
-// MemStorage Структура для хранения метрик
-type MemStorage struct {
+// Storage Структура для хранения метрик
+type Storage struct {
 	Gauge   []Gauge
 	Counter []Counter
 }
@@ -25,14 +26,14 @@ type Counter struct {
 	Value int64
 }
 
-// New return a new MemStorage instance.
-func New() (*MemStorage, error) {
-	var storage MemStorage
+// New return a new Storage instance.
+func New() (*Storage, error) {
+	var storage Storage
 	return &storage, nil
 }
 
 // UpdateGauge saves the given Gauge metric to the memory.
-func (s *MemStorage) UpdateGauge(key string, value float64) error {
+func (s *Storage) UpdateGauge(ctx context.Context, key string, value float64) error {
 
 	changed := false
 	for i := 0; i < len(s.Gauge); i++ {
@@ -53,7 +54,7 @@ func (s *MemStorage) UpdateGauge(key string, value float64) error {
 }
 
 // UpdateCounter saves the given Counter metric to the memory.
-func (s *MemStorage) UpdateCounter(key string, value int64) error {
+func (s *Storage) UpdateCounter(ctx context.Context, key string, value int64) error {
 	changed := false
 	for i := 0; i < len(s.Counter); i++ {
 		if s.Counter[i].Name == key {
@@ -72,7 +73,7 @@ func (s *MemStorage) UpdateCounter(key string, value int64) error {
 }
 
 // GetAllMetrics Возвращает слайс метрик 2 типов gauge и counter
-func (s *MemStorage) GetAllMetrics() ([][]string, [][]string, error) {
+func (s *Storage) GetAllMetrics(ctx context.Context) ([][]string, [][]string, error) {
 	gauge := make([][]string, 0, 30)
 	for _, metric := range s.Gauge {
 		value := []string{metric.Name, strconv.FormatFloat(metric.Value, 'f', -1, 64)}
@@ -88,7 +89,7 @@ func (s *MemStorage) GetAllMetrics() ([][]string, [][]string, error) {
 }
 
 // GetMetric Возвращает метрику по ключу
-func (s *MemStorage) GetMetric(typ string, key string) (string, error) {
+func (s *Storage) GetMetric(ctx context.Context, typ string, key string) (string, error) {
 	if typ == format.Gauge {
 		for _, metric := range s.Gauge {
 			if metric.Name == key {

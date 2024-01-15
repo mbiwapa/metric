@@ -29,10 +29,10 @@ func New(log *zap.Logger, storage Pinger) http.HandlerFunc {
 			zap.String("request_id", middleware.GetReqID(ctx)),
 		)
 
-		databseCtx, cancel := context.WithTimeout(ctx, 1*time.Second)
+		databaseCtx, cancel := context.WithTimeout(ctx, 1*time.Second)
 		defer cancel()
 
-		err := storage.Ping(databseCtx)
+		err := storage.Ping(databaseCtx)
 		if err != nil {
 			log.Error("Database is unvailable", zap.Error(err))
 			w.WriteHeader(http.StatusInternalServerError)
