@@ -31,7 +31,6 @@ func Start(repo MetricGeter, stor MetricUpdater, list []ObservableMetric, pollIn
 	ctx := context.Background()
 	for {
 		for _, metric := range list {
-
 			value, err := repo.MetricGet(metric.Name, metric.SourceType)
 			if err != nil {
 				//TODO error chanel
@@ -42,9 +41,7 @@ func Start(repo MetricGeter, stor MetricUpdater, list []ObservableMetric, pollIn
 					zap.Error(err))
 				panic("Metric no longer supported")
 			}
-			databaseCtx, cancel := context.WithTimeout(ctx, 1*time.Second)
-			defer cancel()
-			err = stor.UpdateGauge(databaseCtx, metric.Name, value)
+			err = stor.UpdateGauge(ctx, metric.Name, value)
 			if err != nil {
 				//TODO error chanel
 				logger.Error(
@@ -55,9 +52,7 @@ func Start(repo MetricGeter, stor MetricUpdater, list []ObservableMetric, pollIn
 				panic("Storage unavailable!")
 			}
 		}
-		databaseCtx, cancel := context.WithTimeout(ctx, 1*time.Second)
-		defer cancel()
-		err := stor.UpdateGauge(databaseCtx, "RandomValue", rand.Float64())
+		err := stor.UpdateGauge(ctx, "RandomValue", rand.Float64())
 		if err != nil {
 			//TODO error chanel
 			logger.Error(
@@ -68,9 +63,7 @@ func Start(repo MetricGeter, stor MetricUpdater, list []ObservableMetric, pollIn
 			panic("Storage unavailable!")
 		}
 
-		databaseCtx, cancel = context.WithTimeout(ctx, 1*time.Second)
-		defer cancel()
-		err = stor.UpdateCounter(databaseCtx, "PollCount", 1)
+		err = stor.UpdateCounter(ctx, "PollCount", 1)
 		if err != nil {
 			//TODO error chanel
 			logger.Error(

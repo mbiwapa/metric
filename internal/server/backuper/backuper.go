@@ -57,9 +57,7 @@ func (s *Buckuper) Start() {
 		sleepSecond := time.Duration(s.storeInterval) * time.Second
 		time.Sleep(sleepSecond)
 
-		databaseCtx, cancel := context.WithTimeout(ctx, 1*time.Second)
-		defer cancel()
-		gauge, counter, err := s.storage.GetAllMetrics(databaseCtx)
+		gauge, counter, err := s.storage.GetAllMetrics(ctx)
 		if err != nil {
 			//TODO error chanel
 			s.logger.Error("Cant get all metrics", zap.Error(err))

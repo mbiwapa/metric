@@ -129,6 +129,10 @@ func (s *Storage) GetAllMetrics(ctx context.Context) ([][]string, [][]string, er
 			gauges = append(gauges, []string{name, strconv.FormatFloat(gauge, 'f', -1, 64)})
 		}
 	}
+	err = rows.Err()
+	if err != nil {
+		return nil, nil, fmt.Errorf("%s: %w", op, err)
+	}
 
 	return gauges, counters, nil
 }
