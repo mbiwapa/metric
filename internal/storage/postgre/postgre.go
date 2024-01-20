@@ -207,7 +207,11 @@ func (s *Storage) UpdateBatch(ctx context.Context, gauges [][]string, counters [
 		}
 	}
 	for _, counter := range counters {
-		originalValue, err := s.GetMetric(ctx, format.Counter, counter[0])
+		stmtSelect, err := tx.PrepareContext(ctx, `SELECT name, counter FROM metric WHERE name=$1`)
+		var name string
+		var getCounter int64
+		getCounter = 0
+		err = stmtSelect.QueryRowContext(ctx, counter[0]).Scan(&name, &getCounter)
 		if err != nil {
 			if !errors.Is(err, storage.ErrMetricNotFound) {
 				return fmt.Errorf("%s: %w", op, err)
@@ -218,14 +222,7 @@ func (s *Storage) UpdateBatch(ctx context.Context, gauges [][]string, counters [
 		if err != nil {
 			return fmt.Errorf("%s: %w", op, err)
 		}
-
-		if originalValue != "" {
-			val, err := strconv.ParseInt(originalValue, 0, 64)
-			if err != nil {
-				return fmt.Errorf("%s: %w", op, err)
-			}
-			newVal = newVal + val
-		}
+		newVal = newVal + getCounter
 		_, err = stmt.ExecContext(ctx, counter[0], 0, newVal)
 		if err != nil {
 			return fmt.Errorf("%s: %w", op, err)
