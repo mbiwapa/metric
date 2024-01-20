@@ -33,31 +33,36 @@ func New(url string, logger *zap.Logger) (*Client, error) {
 }
 
 // Send отправляет метрику на сервер
-func (c *Client) Send(typ string, name string, value string) error {
+func (c *Client) Send(gauges [][]string, counters [][]string) error {
 	const op = "http-client.send.Send"
 	c.Logger.With(zap.String("op", op))
 
-	body := format.Metric{
-		MType: typ,
-		ID:    name,
-	}
+	var body []format.Metric
 
-	switch typ {
-	case format.Gauge:
-		val, err := strconv.ParseFloat(value, 64)
+	for _, gauge := range gauges {
+		val, err := strconv.ParseFloat(gauge[1], 64)
 		if err != nil {
 			c.Logger.Error("Cant parse gauge metric", zap.Error(err))
 			return err
 		}
-		body.Value = &val
-	case format.Counter:
-		val, err := strconv.ParseInt(value, 0, 64)
+		body = append(body, format.Metric{
+			MType: format.Gauge,
+			ID:    gauge[0],
+			Value: &val,
+		})
+	}
+
+	for _, counter := range counters {
+		val, err := strconv.ParseInt(counter[1], 10, 64)
 		if err != nil {
 			c.Logger.Error("Cant parse counter metric", zap.Error(err))
 			return err
 		}
-		body.Delta = &val
-	default:
+		body = append(body, format.Metric{
+			MType: format.Counter,
+			ID:    counter[0],
+			Delta: &val,
+		})
 	}
 
 	data, err := json.Marshal(body)
@@ -72,7 +77,7 @@ func (c *Client) Send(typ string, name string, value string) error {
 	}
 	c.Logger.Info("JSON ready", zap.ByteString("json", data))
 
-	req, err := http.NewRequest("POST", c.URL+"/update/", compressedData)
+	req, err := http.NewRequest("POST", c.URL+"/updates/", compressedData)
 	if err != nil {
 		c.Logger.Error("Cant create request", zap.Error(err))
 		return err
@@ -83,9 +88,6 @@ func (c *Client) Send(typ string, name string, value string) error {
 	req.Header.Set("Content-Encoding", "gzip")
 
 	resp, err := c.Client.Do(req)
-	//FIXME именно в автотестах клиент периодически ловит EOF и отваливается
-	//FIXME как правило на первый же запрос, но потом приходит в себя, (Уточнить у ментора)
-	//TODO судя по всему сервер просто долго поднимается.... убил на это больше 5 часов
 	if err != nil {
 		c.Logger.Error("Cant send metric", zap.Error(err))
 	}

@@ -14,6 +14,7 @@ import (
 	"github.com/mbiwapa/metric/internal/server/handlers/home"
 	"github.com/mbiwapa/metric/internal/server/handlers/ping"
 	"github.com/mbiwapa/metric/internal/server/handlers/update"
+	"github.com/mbiwapa/metric/internal/server/handlers/updates"
 	"github.com/mbiwapa/metric/internal/server/handlers/value"
 	"github.com/mbiwapa/metric/internal/server/middleware/decompressor"
 	mwLogger "github.com/mbiwapa/metric/internal/server/middleware/logger"
@@ -92,6 +93,7 @@ func main() {
 		router.Get("/value/{type}/{name}", value.New(logger, storage))
 		router.Post("/value/", value.NewJSON(logger, storage))
 		router.Get("/", home.New(logger, storage))
+		router.Post("/updates/", updates.NewJSON(logger, storage, backup))
 	} else {
 		router.Post("/{type}/{name}/{value}", update.New(logger, pgstorage, backup))
 		router.Post("/update/", update.NewJSON(logger, pgstorage, backup))
@@ -99,6 +101,7 @@ func main() {
 		router.Post("/value/", value.NewJSON(logger, pgstorage))
 		router.Get("/", home.New(logger, pgstorage))
 		router.Get("/ping", ping.New(logger, pgstorage))
+		router.Post("/updates/", updates.NewJSON(logger, pgstorage, backup))
 	}
 
 	srv := &http.Server{

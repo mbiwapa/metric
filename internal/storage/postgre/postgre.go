@@ -9,6 +9,8 @@ import (
 
 	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib"
+
+	"github.com/mbiwapa/metric/internal/lib/api/format"
 	"github.com/mbiwapa/metric/internal/storage"
 )
 
@@ -28,8 +30,8 @@ func New(dsn string) (*Storage, error) {
 
 	stmt, err := db.Prepare(`CREATE TABLE IF NOT EXISTS metric (
 		name TEXT PRIMARY KEY,
-		gauge DOUBLE PRECISION,
-		counter INTEGER);`)
+		gauge DOUBLE PRECISION NOT NULL DEFAULT 0,
+		counter INTEGER NOT NULL DEFAULT 0);`)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
@@ -79,9 +81,22 @@ func (s *Storage) UpdateGauge(ctx context.Context, key string, value float64) er
 // UpdateCounter saves the given Counter metric to the memory.
 func (s *Storage) UpdateCounter(ctx context.Context, key string, value int64) error {
 	const op = "storage.postgre.UpdateCounter"
+	originalValue, err := s.GetMetric(ctx, format.Counter, key)
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
 	stmt, err := s.db.PrepareContext(ctx, `INSERT INTO metric (name, counter) VALUES ($1,$2) ON CONFLICT (name) DO UPDATE SET counter=$2`)
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	if originalValue != "" {
+		val, err := strconv.ParseInt(originalValue, 0, 64)
+		if err != nil {
+			return fmt.Errorf("%s: %w", op, err)
+		}
+		value = value + val
 	}
 	_, err = stmt.ExecContext(ctx, key, value)
 	if err != nil {
@@ -141,18 +156,84 @@ func (s *Storage) GetAllMetrics(ctx context.Context) ([][]string, [][]string, er
 func (s *Storage) GetMetric(ctx context.Context, typ string, key string) (string, error) {
 
 	const op = "storage.postgre.GetMetric"
-	stmt, err := s.db.PrepareContext(ctx, `SELECT $1 FROM metric WHERE name=$2`)
+	stmt, err := s.db.PrepareContext(ctx, `SELECT name, gauge, counter FROM metric WHERE name=$1`)
 	if err != nil {
 		return "", fmt.Errorf("%s: %w", op, err)
 	}
 
-	var result string
-	err = stmt.QueryRowContext(ctx, typ, key).Scan(result)
+	var name string
+	var gauge float64
+	var counter int64
+	err = stmt.QueryRowContext(ctx, key).Scan(&name, &gauge, &counter)
 	if errors.Is(err, sql.ErrNoRows) {
-		return "", fmt.Errorf("%s: %w", op, storage.ErrMetricNotFound)
+		return "", storage.ErrMetricNotFound
 	}
 	if err != nil {
 		return "", fmt.Errorf("%s: %w", op, err)
 	}
-	return result, nil
+	if typ == format.Gauge {
+		return strconv.FormatFloat(gauge, 'f', -1, 64), nil
+	}
+	if typ == format.Counter {
+		return strconv.FormatInt(counter, 10), nil
+	}
+	return "", nil
+}
+
+// UpdateBatch saves the given Gauge and Counter metrics to the PG.
+func (s *Storage) UpdateBatch(ctx context.Context, gauges [][]string, counters [][]string) error {
+	const op = "storage.postgre.UpdateBatch"
+
+	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{})
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+	defer tx.Rollback()
+
+	stmt, err := tx.PrepareContext(ctx, `INSERT INTO metric (name, gauge, counter) VALUES ($1,$2,$3) ON CONFLICT (name) DO UPDATE SET gauge=$2, counter=$3`)
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+	for _, gauge := range gauges {
+		newVal, err := strconv.ParseFloat(gauge[1], 64)
+		if err != nil {
+			return fmt.Errorf("%s: %w", op, err)
+		}
+		_, err = stmt.ExecContext(ctx, gauge[0], newVal, 0)
+		if err != nil {
+			return fmt.Errorf("%s: %w", op, err)
+		}
+	}
+	for _, counter := range counters {
+		originalValue, err := s.GetMetric(ctx, format.Counter, counter[0])
+		if err != nil {
+			if !errors.Is(err, storage.ErrMetricNotFound) {
+				return fmt.Errorf("%s: %w", op, err)
+			}
+		}
+
+		newVal, err := strconv.ParseInt(counter[1], 0, 64)
+		if err != nil {
+			return fmt.Errorf("%s: %w", op, err)
+		}
+
+		if originalValue != "" {
+			val, err := strconv.ParseInt(originalValue, 0, 64)
+			if err != nil {
+				return fmt.Errorf("%s: %w", op, err)
+			}
+			newVal = newVal + val
+		}
+		_, err = stmt.ExecContext(ctx, counter[0], 0, newVal)
+		if err != nil {
+			return fmt.Errorf("%s: %w", op, err)
+		}
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	return nil
 }

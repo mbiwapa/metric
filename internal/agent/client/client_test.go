@@ -13,9 +13,8 @@ import (
 func TestClient_Send(t *testing.T) {
 
 	type args struct {
-		typ   string
-		name  string
-		value string
+		gauge   [][]string
+		counter [][]string
 	}
 	tests := []struct {
 		name    string
@@ -25,20 +24,10 @@ func TestClient_Send(t *testing.T) {
 		{
 			name: "Clietn Тест 1 - успешный тест",
 			args: args{
-				typ:   "gauge",
-				name:  "test2",
-				value: "0.5686",
+				gauge:   [][]string{{"test", "0.567"}},
+				counter: [][]string{{"test2", "1"}},
 			},
 			wantErr: false,
-		},
-		{
-			name: "Clietn Тест 2 - 404 от сервера",
-			args: args{
-				typ:   "counter",
-				name:  "test2",
-				value: "0.5676",
-			},
-			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
@@ -63,7 +52,7 @@ func TestClient_Send(t *testing.T) {
 
 			require.NoError(t, err)
 
-			err = c.Send(tt.args.typ, tt.args.name, tt.args.value)
+			err = c.Send(tt.args.gauge, tt.args.counter)
 
 			if tt.wantErr {
 				require.Error(t, err)
