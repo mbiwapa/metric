@@ -31,7 +31,7 @@ func New(dsn string) (*Storage, error) {
 	stmt, err := db.Prepare(`CREATE TABLE IF NOT EXISTS metric (
 		name TEXT PRIMARY KEY,
 		gauge DOUBLE PRECISION NOT NULL DEFAULT 0,
-		counter INTEGER NOT NULL DEFAULT 0);`)
+		counter BIGINT NOT NULL DEFAULT 0);`)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
