@@ -83,7 +83,9 @@ func (s *Storage) UpdateCounter(ctx context.Context, key string, value int64) er
 	const op = "storage.postgre.UpdateCounter"
 	originalValue, err := s.GetMetric(ctx, format.Counter, key)
 	if err != nil {
-		return fmt.Errorf("%s: %w", op, err)
+		if !errors.Is(err, storage.ErrMetricNotFound) {
+			return fmt.Errorf("%s: %w", op, err)
+		}
 	}
 
 	stmt, err := s.db.PrepareContext(ctx, `INSERT INTO metric (name, counter) VALUES ($1,$2) ON CONFLICT (name) DO UPDATE SET counter=$2`)
