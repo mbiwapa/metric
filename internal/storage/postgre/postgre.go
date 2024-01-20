@@ -208,12 +208,14 @@ func (s *Storage) UpdateBatch(ctx context.Context, gauges [][]string, counters [
 	}
 	for _, counter := range counters {
 		stmtSelect, err := tx.PrepareContext(ctx, `SELECT name, counter FROM metric WHERE name=$1`)
+		if err != nil {
+			return fmt.Errorf("%s: %w", op, err)
+		}
 		var name string
 		var getCounter int64
-		getCounter = 0
 		err = stmtSelect.QueryRowContext(ctx, counter[0]).Scan(&name, &getCounter)
 		if err != nil {
-			if !errors.Is(err, storage.ErrMetricNotFound) {
+			if !errors.Is(err, sql.ErrNoRows) {
 				return fmt.Errorf("%s: %w", op, err)
 			}
 		}
