@@ -20,6 +20,7 @@ import (
 type Updater interface {
 	UpdateGauge(ctx context.Context, key string, value float64) error
 	UpdateCounter(ctx context.Context, key string, value int64) error
+	GetMetric(ctx context.Context, typ string, key string) (string, error)
 }
 
 // Backuper interface for backuper

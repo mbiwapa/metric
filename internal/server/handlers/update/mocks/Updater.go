@@ -13,6 +13,30 @@ type Updater struct {
 	mock.Mock
 }
 
+// GetMetric provides a mock function with given fields: ctx, typ, key
+func (_m *Updater) GetMetric(ctx context.Context, typ string, key string) (string, error) {
+	ret := _m.Called(ctx, typ, key)
+
+	var r0 string
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) (string, error)); ok {
+		return rf(ctx, typ, key)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) string); ok {
+		r0 = rf(ctx, typ, key)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
+		r1 = rf(ctx, typ, key)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // UpdateCounter provides a mock function with given fields: ctx, key, value
 func (_m *Updater) UpdateCounter(ctx context.Context, key string, value int64) error {
 	ret := _m.Called(ctx, key, value)
