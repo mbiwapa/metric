@@ -4,7 +4,10 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"time"
 
+	"github.com/Rican7/retry"
+	"github.com/Rican7/retry/strategy"
 	"go.uber.org/zap"
 
 	"github.com/mbiwapa/metric/internal/agent/compressor"
@@ -75,28 +78,58 @@ func (c *Client) Send(gauges [][]string, counters [][]string) error {
 		c.Logger.Error("Cant initializing compressed reader", zap.Error(err))
 		return err
 	}
-	c.Logger.Info("JSON ready", zap.ByteString("json", data))
 
-	req, err := http.NewRequest("POST", c.URL+"/updates/", compressedData)
-	if err != nil {
-		c.Logger.Error("Cant create request", zap.Error(err))
-		return err
-	}
-	req.Close = true // Close the connection after sending the request
-
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Content-Encoding", "gzip")
-
-	resp, err := c.Client.Do(req)
-	if err != nil {
-		c.Logger.Error("Cant send metric", zap.Error(err))
-	}
-
-	if resp != nil {
-		defer resp.Body.Close()
-		if resp.StatusCode != http.StatusOK {
-			c.Logger.Error("Cant send metric", zap.String("error", resp.Status))
+	action := func(attempt uint) error {
+		req, err := http.NewRequest("POST", c.URL+"/updates/", compressedData)
+		if err != nil {
+			c.Logger.Error("Cant create request", zap.Error(err), zap.Uint("attempt", attempt))
+			return err
 		}
+		req.Close = true // Close the connection after sending the request
+
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Content-Encoding", "gzip")
+
+		resp, err := c.Client.Do(req)
+		if err != nil {
+			c.Logger.Error("Cant send metric", zap.Error(err), zap.Uint("attempt", attempt))
+			return err
+		}
+
+		if resp != nil {
+			defer resp.Body.Close()
+			if resp.StatusCode != http.StatusOK {
+				c.Logger.Error("No response", zap.String("error", resp.Status), zap.Uint("attempt", attempt))
+			}
+			return err
+		}
+		c.Logger.Info("Request completed successfully!", zap.ByteString("json", data))
+		return nil
 	}
+
+	err = retry.Retry(
+		action,
+		strategy.Limit(4),
+		strategy.Backoff(func(attempt uint) time.Duration {
+			var duration time.Duration
+			switch attempt {
+			case 1:
+				duration = 1 * time.Second
+			case 2:
+				duration = 3 * time.Second
+			case 3:
+				duration = 5 * time.Second
+			default:
+				duration = 1 * time.Second
+			}
+			c.Logger.Info("Wait", zap.Uint("attempt", attempt), zap.Duration("duration", duration))
+			return duration
+		}),
+	)
+
+	if err != nil {
+		c.Logger.Error("Cant send metric affter 4 attemt", zap.Error(err))
+	}
+
 	return nil
 }

@@ -40,7 +40,7 @@ func NewJSON(log *zap.Logger, storage Updater, backup Backuper) http.HandlerFunc
 			return
 		}
 
-		databaseCtx, cancel := context.WithTimeout(ctx, 1*time.Second)
+		databaseCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		defer cancel()
 
 		var updateErr error
@@ -50,7 +50,7 @@ func NewJSON(log *zap.Logger, storage Updater, backup Backuper) http.HandlerFunc
 			updateErr = storage.UpdateGauge(databaseCtx, metricRequest.ID, *metricRequest.Value)
 		case format.Counter:
 			updateErr = storage.UpdateCounter(databaseCtx, metricRequest.ID, *metricRequest.Delta)
-			databaseGetCtx, cancel := context.WithTimeout(ctx, 1*time.Second)
+			databaseGetCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			defer cancel()
 			stringVal, err := storage.GetMetric(databaseGetCtx, metricRequest.MType, metricRequest.ID)
 			if err != nil {

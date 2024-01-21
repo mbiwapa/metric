@@ -58,7 +58,7 @@ func New(log *zap.Logger, storage Updater, backup Backuper) http.HandlerFunc {
 			return
 		}
 
-		databaseCtx, cancel := context.WithTimeout(ctx, 1*time.Second)
+		databaseCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		defer cancel()
 
 		switch typ {

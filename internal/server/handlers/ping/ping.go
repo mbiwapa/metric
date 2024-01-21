@@ -29,7 +29,7 @@ func New(log *zap.Logger, storage Pinger) http.HandlerFunc {
 			zap.String("request_id", middleware.GetReqID(ctx)),
 		)
 
-		databaseCtx, cancel := context.WithTimeout(ctx, 1*time.Second)
+		databaseCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		defer cancel()
 
 		err := storage.Ping(databaseCtx)

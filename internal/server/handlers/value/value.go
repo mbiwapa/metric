@@ -43,7 +43,7 @@ func New(log *zap.Logger, storage MetricGeter) http.HandlerFunc {
 			return
 		}
 
-		databaseCtx, cancel := context.WithTimeout(ctx, 1*time.Second)
+		databaseCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		defer cancel()
 
 		value, err := storage.GetMetric(databaseCtx, typ, name)

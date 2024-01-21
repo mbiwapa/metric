@@ -28,7 +28,7 @@ func New(log *zap.Logger, storage AllMetricGeter) http.HandlerFunc {
 			zap.String("request_id", middleware.GetReqID(ctx)),
 		)
 
-		databaseCtx, cancel := context.WithTimeout(ctx, 1*time.Second)
+		databaseCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		defer cancel()
 
 		gauge, counter, err := storage.GetAllMetrics(databaseCtx)

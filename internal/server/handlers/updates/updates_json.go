@@ -73,7 +73,7 @@ func NewJSON(log *zap.Logger, storage Updater, backup Backuper) http.HandlerFunc
 			}
 		}
 
-		databaseCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+		databaseCtx, cancel := context.WithTimeout(ctx, 11*time.Second)
 		defer cancel()
 		err := storage.UpdateBatch(databaseCtx, gauges, counters)
 
