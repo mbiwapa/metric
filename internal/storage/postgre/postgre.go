@@ -6,15 +6,14 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
-	"time"
 
 	"github.com/Rican7/retry"
-	"github.com/Rican7/retry/backoff"
 	"github.com/Rican7/retry/strategy"
 	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib"
 
 	"github.com/mbiwapa/metric/internal/lib/api/format"
+	"github.com/mbiwapa/metric/internal/lib/retry/backoff"
 	"github.com/mbiwapa/metric/internal/storage"
 )
 
@@ -53,7 +52,7 @@ func New(dsn string) (*Storage, error) {
 	err := retry.Retry(
 		action,
 		strategy.Limit(4),
-		strategy.Backoff(Backoff()),
+		strategy.Backoff(backoff.Backoff()),
 	)
 
 	if err != nil {
@@ -78,7 +77,7 @@ func (s *Storage) Ping(ctx context.Context) error {
 	err := retry.Retry(
 		action,
 		strategy.Limit(4),
-		strategy.Backoff(Backoff()),
+		strategy.Backoff(backoff.Backoff()),
 	)
 
 	if err != nil {
@@ -113,7 +112,7 @@ func (s *Storage) UpdateGauge(ctx context.Context, key string, value float64) er
 	err := retry.Retry(
 		action,
 		strategy.Limit(4),
-		strategy.Backoff(Backoff()),
+		strategy.Backoff(backoff.Backoff()),
 	)
 
 	if err != nil {
@@ -158,7 +157,7 @@ func (s *Storage) UpdateCounter(ctx context.Context, key string, value int64) er
 	err := retry.Retry(
 		action,
 		strategy.Limit(4),
-		strategy.Backoff(Backoff()),
+		strategy.Backoff(backoff.Backoff()),
 	)
 
 	if err != nil {
@@ -214,7 +213,7 @@ func (s *Storage) GetAllMetrics(ctx context.Context) ([][]string, [][]string, er
 	err := retry.Retry(
 		action,
 		strategy.Limit(4),
-		strategy.Backoff(Backoff()),
+		strategy.Backoff(backoff.Backoff()),
 	)
 	if err != nil {
 		return nil, nil, fmt.Errorf("%s: %w", op, err)
@@ -260,7 +259,7 @@ func (s *Storage) GetMetric(ctx context.Context, typ string, key string) (string
 	err := retry.Retry(
 		action,
 		strategy.Limit(4),
-		strategy.Backoff(Backoff()),
+		strategy.Backoff(backoff.Backoff()),
 	)
 	if err != nil {
 		return "", fmt.Errorf("%s: %w", op, err)
@@ -332,29 +331,11 @@ func (s *Storage) UpdateBatch(ctx context.Context, gauges [][]string, counters [
 	err := retry.Retry(
 		action,
 		strategy.Limit(4),
-		strategy.Backoff(Backoff()),
+		strategy.Backoff(backoff.Backoff()),
 	)
 
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
 	return nil
-}
-
-// Backoff returns a backoff.Algorithm that uses exponential backoff.
-func Backoff() backoff.Algorithm {
-	return func(attempt uint) time.Duration {
-		var duration time.Duration
-		switch attempt {
-		case 1:
-			duration = 1 * time.Second
-		case 2:
-			duration = 3 * time.Second
-		case 3:
-			duration = 5 * time.Second
-		default:
-			duration = 1 * time.Second
-		}
-		return duration
-	}
 }

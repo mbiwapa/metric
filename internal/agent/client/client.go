@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/Rican7/retry"
 	"github.com/Rican7/retry/strategy"
@@ -12,6 +11,7 @@ import (
 
 	"github.com/mbiwapa/metric/internal/agent/compressor"
 	"github.com/mbiwapa/metric/internal/lib/api/format"
+	"github.com/mbiwapa/metric/internal/lib/retry/backoff"
 )
 
 // Client структура возвращаемая для работы, клиент
@@ -110,22 +110,7 @@ func (c *Client) Send(gauges [][]string, counters [][]string) error {
 	err = retry.Retry(
 		action,
 		strategy.Limit(4),
-		strategy.Backoff(func(attempt uint) time.Duration {
-			var duration time.Duration
-			switch attempt {
-			case 1:
-				duration = 1 * time.Second
-			case 2:
-				duration = 3 * time.Second
-			case 3:
-				duration = 5 * time.Second
-			default:
-				duration = 1 * time.Second
-			}
-			c.Logger.Info("Wait", zap.Uint("attempt", attempt), zap.Duration("duration", duration))
-			return duration
-		}),
-	)
+		strategy.Backoff(backoff.Backoff()))
 
 	if err != nil {
 		c.Logger.Error("Cant send metric affter 4 attemt", zap.Error(err))
