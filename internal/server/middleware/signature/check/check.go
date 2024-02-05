@@ -30,12 +30,6 @@ func New(key string, log *zap.Logger) func(next http.Handler) http.Handler {
 				}
 				r.Body = io.NopCloser(bytes.NewBuffer(body))
 
-				if err != nil {
-					log.Error("Can't read request body", zap.Error(err))
-					w.WriteHeader(http.StatusInternalServerError)
-					return
-				}
-
 				hashStr := signature.GetHash(key, string(body), log)
 				if hashStr != sha256Hash {
 					log.Error("Signature mismatch", zap.String("hashRequest", sha256Hash))
