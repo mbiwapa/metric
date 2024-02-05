@@ -1,26 +1,31 @@
 package value
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/middleware"
 	"go.uber.org/zap"
 
 	"github.com/mbiwapa/metric/internal/lib/api/format"
+	"github.com/mbiwapa/metric/internal/lib/signature"
 	storageErrors "github.com/mbiwapa/metric/internal/storage"
 )
 
 // NewJSON возвращает обработчик для вывода метрики
-func NewJSON(log *zap.Logger, storage MetricGeter) http.HandlerFunc {
+func NewJSON(log *zap.Logger, storage MetricGeter, sha256key string) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		const op = "handlers.value.NewJSON"
+
+		ctx := r.Context()
 		log.With(
 			zap.String("op", op),
-			zap.String("request_id", middleware.GetReqID(r.Context())),
+			zap.String("request_id", middleware.GetReqID(ctx)),
 		)
 
 		var metricRequest format.Metric
@@ -42,7 +47,10 @@ func NewJSON(log *zap.Logger, storage MetricGeter) http.HandlerFunc {
 			return
 		}
 
-		value, err := storage.GetMetric(metricRequest.MType, metricRequest.ID)
+		databaseCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		defer cancel()
+
+		value, err := storage.GetMetric(databaseCtx, metricRequest.MType, metricRequest.ID)
 		if errors.Is(err, storageErrors.ErrMetricNotFound) {
 			log.Info(
 				"Metric is not found",
@@ -77,11 +85,18 @@ func NewJSON(log *zap.Logger, storage MetricGeter) http.HandlerFunc {
 		default:
 		}
 		w.Header().Set("Content-Type", "application/json")
-		enc := json.NewEncoder(w)
-		if err := enc.Encode(metricRequest); err != nil {
+		body, err := json.Marshal(metricRequest)
+		if err != nil {
 			log.Error("Error encoding response", zap.Error(err))
 			return
 		}
+
+		if sha256key != "" {
+			hashStr := signature.GetHash(sha256key, string(body), log)
+			w.Header().Set("HashSHA256", hashStr)
+		}
+
+		w.Write(body)
 		w.WriteHeader(http.StatusOK)
 	}
 }

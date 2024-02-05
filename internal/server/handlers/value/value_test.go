@@ -52,7 +52,7 @@ func TestNew(t *testing.T) {
 			MetricGeterMock := mocks.NewMetricGeter(t)
 
 			if tt.wantStatus == http.StatusOK || tt.mockError != nil {
-				MetricGeterMock.On("GetMetric", mock.AnythingOfType("string"), mock.AnythingOfType("string")).
+				MetricGeterMock.On("GetMetric", mock.Anything, mock.AnythingOfType("string"), mock.AnythingOfType("string")).
 					Return(tt.wantBody, tt.mockError).
 					Once()
 			}
@@ -64,7 +64,7 @@ func TestNew(t *testing.T) {
 
 			r := chi.NewRouter()
 			r.Use(middleware.URLFormat)
-			r.Get("/value/{type}/{name}", New(logger, MetricGeterMock))
+			r.Get("/value/{type}/{name}", New(logger, MetricGeterMock, ""))
 			ts := httptest.NewServer(r)
 			defer ts.Close()
 

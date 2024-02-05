@@ -41,7 +41,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	client, err := client.New(conf.Addr, logger)
+	client, err := client.New(conf.Addr, conf.Key, logger)
 	if err != nil {
 		logger.Error("Dont create http client", zap.Error(err))
 		os.Exit(1)
