@@ -22,6 +22,8 @@ func Start(stor AllMetricGeter, sender MetricSender, reportInterval int64, logge
 	logger.Info("Start Sender!")
 	ctx := context.Background()
 	for {
+		sleepSecond := time.Duration(reportInterval) * time.Second
+		time.Sleep(sleepSecond)
 		gauge, counter, err := stor.GetAllMetrics(ctx)
 		if err != nil {
 			//TODO error chanel
@@ -40,7 +42,5 @@ func Start(stor AllMetricGeter, sender MetricSender, reportInterval int64, logge
 			panic(err.Error())
 
 		}
-		sleepSecond := time.Duration(reportInterval) * time.Second
-		time.Sleep(sleepSecond)
 	}
 }

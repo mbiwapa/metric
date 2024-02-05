@@ -30,6 +30,8 @@ func Start(repo MetricGeter, stor MetricUpdater, list []ObservableMetric, pollIn
 	logger.Info("Start collector!")
 	ctx := context.Background()
 	for {
+		sleepSecond := time.Duration(pollInterval) * time.Second
+		time.Sleep(sleepSecond)
 		for _, metric := range list {
 			value, err := repo.MetricGet(metric.Name, metric.SourceType)
 			if err != nil {
@@ -73,8 +75,5 @@ func Start(repo MetricGeter, stor MetricUpdater, list []ObservableMetric, pollIn
 				zap.Error(err))
 			panic("Storage unavailable!")
 		}
-
-		sleepSecond := time.Duration(pollInterval) * time.Second
-		time.Sleep(sleepSecond)
 	}
 }
