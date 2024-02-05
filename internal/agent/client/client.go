@@ -1,8 +1,6 @@
 package client
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"net/http"
 	"strconv"
@@ -14,6 +12,7 @@ import (
 	"github.com/mbiwapa/metric/internal/agent/compressor"
 	"github.com/mbiwapa/metric/internal/lib/api/format"
 	"github.com/mbiwapa/metric/internal/lib/retry/backoff"
+	"github.com/mbiwapa/metric/internal/lib/signature"
 )
 
 // Client структура возвращаемая для работы, клиент
@@ -95,11 +94,9 @@ func (c *Client) Send(gauges [][]string, counters [][]string) error {
 		req.Header.Set("Content-Encoding", "gzip")
 
 		if c.Key != "" {
-			dataStr := string(data)
-			hashByte := sha256.Sum256([]byte(dataStr + c.Key))
-			hash := hex.EncodeToString(hashByte[:])
-			logger.Info("Hash is generated", zap.String("hash", hash))
-			req.Header.Set("HashSHA256", hash)
+			hashStr := signature.GetHash(c.Key, string(data), logger)
+			logger.Info("Hash is generated", zap.String("hash", hashStr))
+			req.Header.Set("HashSHA256", hashStr)
 		}
 
 		resp, err := c.Client.Do(req)

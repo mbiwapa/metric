@@ -1,6 +1,7 @@
 package check
 
 import (
+	"bytes"
 	"io"
 	"net/http"
 
@@ -20,7 +21,15 @@ func New(key string, log *zap.Logger) func(next http.Handler) http.Handler {
 
 			if sha256Hash != "" && key != "" {
 				log.Info("Keys", zap.String("responseHash", sha256Hash))
+
 				body, err := io.ReadAll(r.Body)
+				if err != nil {
+					log.Error("Cannot read body", zap.Error(err))
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
+				r.Body = io.NopCloser(bytes.NewBuffer(body))
+
 				if err != nil {
 					log.Error("Can't read request body", zap.Error(err))
 					w.WriteHeader(http.StatusInternalServerError)
