@@ -14,6 +14,7 @@ type Config struct {
 	Addr              string
 	ReportInterval    int64
 	PollInterval      int64
+	Key               string
 	ObservableMetrics []collector.ObservableMetric
 }
 
@@ -22,16 +23,19 @@ func MustLoadConfig() (*Config, error) {
 	var Addr string
 	var PollInterval int64
 	var ReportInterval int64
+	var Key string
 	var err error
 
 	flag.StringVar(&Addr, "a", "localhost:8080", "Адрес  и порт сервера по сбору метрик")
 	flag.Int64Var(&ReportInterval, "r", 10, "Частота отправки метрик на сервер (по умолчанию 10 секунд)")
 	flag.Int64Var(&PollInterval, "p", 2, "Частота опроса метрик из источника (по умолчанию 2 секунды)")
+	flag.StringVar(&Key, "k", "", "Ключ для вычисления хеша")
 	flag.Parse()
 
 	envAddr := os.Getenv("ADDRESS")
 	envPollInterval := os.Getenv("REPORT_INTERVAL")
 	envReportInterval := os.Getenv("POLL_INTERVAL")
+	envKey := os.Getenv("KEY")
 	if envAddr != "" {
 		Addr = envAddr
 	}
@@ -47,12 +51,16 @@ func MustLoadConfig() (*Config, error) {
 			return nil, fmt.Errorf("invalid env value: %s. %s", envReportInterval, err)
 		}
 	}
+	if envKey != "" {
+		Key = envKey
+	}
 
 	cfg := &Config{
 		ObservableMetrics: getObservableMetrics(),
 		Addr:              "http://" + Addr,
 		PollInterval:      PollInterval,
 		ReportInterval:    ReportInterval,
+		Key:               Key,
 	}
 
 	return cfg, nil
