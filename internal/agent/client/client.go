@@ -127,3 +127,13 @@ func (c *Client) Send(gauges [][]string, counters [][]string) error {
 
 	return nil
 }
+
+// Worker отправляет метрику на сервер в режиме потока
+func (c *Client) Worker(jobs <-chan map[string][][]string, errorChanel chan<- error) {
+	for j := range jobs {
+		err := c.Send(j["gauge"], j["counter"])
+		if err != nil {
+			errorChanel <- err
+		}
+	}
+}

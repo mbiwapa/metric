@@ -2,14 +2,14 @@ package main
 
 import (
 	"os"
-	"time"
 
 	"go.uber.org/zap"
 
 	"github.com/mbiwapa/metric/internal/agent/client"
 	"github.com/mbiwapa/metric/internal/agent/collector"
 	"github.com/mbiwapa/metric/internal/agent/sender"
-	"github.com/mbiwapa/metric/internal/agent/source/memstats"
+	"github.com/mbiwapa/metric/internal/agent/source/gopsutilsource"
+	"github.com/mbiwapa/metric/internal/agent/source/memstatssource"
 	config "github.com/mbiwapa/metric/internal/config/client"
 	"github.com/mbiwapa/metric/internal/logger"
 	"github.com/mbiwapa/metric/internal/storage/memstorage"
@@ -29,7 +29,13 @@ func main() {
 
 	logger.Info("Start service!")
 
-	metricsRepo, err := memstats.New()
+	memSource, err := memstatssource.New()
+	if err != nil {
+		logger.Error("Metrics source unavailable!", zap.Error(err))
+		os.Exit(1)
+	}
+
+	psutilSource, err := gopsutilsource.New()
 	if err != nil {
 		logger.Error("Metrics source unavailable!", zap.Error(err))
 		os.Exit(1)
@@ -46,12 +52,14 @@ func main() {
 		logger.Error("Dont create http client", zap.Error(err))
 		os.Exit(1)
 	}
+	errorChanel := make(chan error)
 
-	go collector.Start(metricsRepo, storage, conf.ObservableMetrics, conf.PollInterval, logger)
+	collector.Start(storage, conf.PollInterval, logger, errorChanel, memSource, psutilSource)
 
-	go sender.Start(storage, client, conf.ReportInterval, logger)
+	sender.Start(storage, client, conf.ReportInterval, logger, conf.WorkerCount, errorChanel)
 
-	//TODO переделать
-	time.Sleep(10 * time.Minute)
+	for err := range errorChanel {
+		logger.Error("Error:", zap.Error(err))
+	}
 
 }

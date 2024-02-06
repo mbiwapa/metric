@@ -2,6 +2,7 @@ package sender
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"go.uber.org/zap"
@@ -14,33 +15,28 @@ type AllMetricGeter interface {
 
 // MetricSender interface for sender
 type MetricSender interface {
-	Send(gauges [][]string, counters [][]string) error
+	Worker(jobs <-chan map[string][][]string, errorChanel chan<- error)
 }
 
 // Start запускает процесс отправки метрик раз в reportInterval секунд
-func Start(stor AllMetricGeter, sender MetricSender, reportInterval int64, logger *zap.Logger) {
+func Start(stor AllMetricGeter, sender MetricSender, reportInterval int64, logger *zap.Logger, numWorker int, errorChanel chan<- error) {
 	logger.Info("Start Sender!")
 	ctx := context.Background()
-	for {
-		sleepSecond := time.Duration(reportInterval) * time.Second
-		time.Sleep(sleepSecond)
-		gauge, counter, err := stor.GetAllMetrics(ctx)
-		if err != nil {
-			//TODO error chanel
-			logger.Error(
-				"Cant get all metrics")
-			panic("Stor unavailable!")
-		}
-		err = sender.Send(gauge, counter)
-		if err != nil {
-			//TODO error chanel
-			logger.Error(
-				"Cant send metric",
-				zap.Any("gauge", gauge),
-				zap.Any("counter", counter),
-				zap.Error(err))
-			panic(err.Error())
 
-		}
+	jobsChanel := make(chan map[string][][]string)
+	for i := 1; i <= numWorker; i++ {
+		go sender.Worker(jobsChanel, errorChanel)
 	}
+
+	go func(jobs chan<- map[string][][]string) {
+		for {
+			sleepSecond := time.Duration(reportInterval) * time.Second
+			time.Sleep(sleepSecond)
+			gauge, counter, err := stor.GetAllMetrics(ctx)
+			if err != nil {
+				errorChanel <- fmt.Errorf("%s: %w", "Sender:", err)
+			}
+			jobs <- map[string][][]string{"gauge": gauge, "counter": counter}
+		}
+	}(jobsChanel)
 }
