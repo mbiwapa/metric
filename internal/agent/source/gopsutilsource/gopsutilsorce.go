@@ -53,7 +53,7 @@ func (s *MetricsRepo) MetricGet(metricName string, sourceType string) (float64, 
 		}
 	}
 
-	return 0, fmt.Errorf("Undefined metric: %s", metricName)
+	return 0, fmt.Errorf("undefined metric: %s", metricName)
 }
 
 // GetObservableMetrics возвращает список метрик для отслеживание агентом
