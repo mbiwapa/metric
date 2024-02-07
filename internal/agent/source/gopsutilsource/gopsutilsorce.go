@@ -13,7 +13,7 @@ import (
 type MetricsRepo struct {
 }
 
-// New возвращает инстанс репы
+// New возвращает инстанс источника
 func New() (*MetricsRepo, error) {
 	var storage MetricsRepo
 	return &storage, nil
