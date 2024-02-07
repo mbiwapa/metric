@@ -1,14 +1,15 @@
 package memstorage
 
 import (
+	"context"
 	"strconv"
 
 	"github.com/mbiwapa/metric/internal/lib/api/format"
 	"github.com/mbiwapa/metric/internal/storage"
 )
 
-// MemStorage Структура для хранения метрик
-type MemStorage struct {
+// Storage Структура для хранения метрик
+type Storage struct {
 	Gauge   []Gauge
 	Counter []Counter
 }
@@ -25,14 +26,14 @@ type Counter struct {
 	Value int64
 }
 
-// New return a new MemStorage instance.
-func New() (*MemStorage, error) {
-	var storage MemStorage
+// New return a new Storage instance.
+func New() (*Storage, error) {
+	var storage Storage
 	return &storage, nil
 }
 
 // UpdateGauge saves the given Gauge metric to the memory.
-func (s *MemStorage) UpdateGauge(key string, value float64) error {
+func (s *Storage) UpdateGauge(_ context.Context, key string, value float64) error {
 
 	changed := false
 	for i := 0; i < len(s.Gauge); i++ {
@@ -53,7 +54,7 @@ func (s *MemStorage) UpdateGauge(key string, value float64) error {
 }
 
 // UpdateCounter saves the given Counter metric to the memory.
-func (s *MemStorage) UpdateCounter(key string, value int64) error {
+func (s *Storage) UpdateCounter(_ context.Context, key string, value int64) error {
 	changed := false
 	for i := 0; i < len(s.Counter); i++ {
 		if s.Counter[i].Name == key {
@@ -72,7 +73,7 @@ func (s *MemStorage) UpdateCounter(key string, value int64) error {
 }
 
 // GetAllMetrics Возвращает слайс метрик 2 типов gauge и counter
-func (s *MemStorage) GetAllMetrics() ([][]string, [][]string, error) {
+func (s *Storage) GetAllMetrics(_ context.Context) ([][]string, [][]string, error) {
 	gauge := make([][]string, 0, 30)
 	for _, metric := range s.Gauge {
 		value := []string{metric.Name, strconv.FormatFloat(metric.Value, 'f', -1, 64)}
@@ -88,7 +89,7 @@ func (s *MemStorage) GetAllMetrics() ([][]string, [][]string, error) {
 }
 
 // GetMetric Возвращает метрику по ключу
-func (s *MemStorage) GetMetric(typ string, key string) (string, error) {
+func (s *Storage) GetMetric(_ context.Context, typ string, key string) (string, error) {
 	if typ == format.Gauge {
 		for _, metric := range s.Gauge {
 			if metric.Name == key {
@@ -105,4 +106,61 @@ func (s *MemStorage) GetMetric(typ string, key string) (string, error) {
 	}
 
 	return "", storage.ErrMetricNotFound
+}
+
+// UpdateBatch saves the given Gauge and Counter metrics to the memory.
+func (s *Storage) UpdateBatch(_ context.Context, gauges [][]string, counters [][]string) error {
+	for _, gauge := range gauges {
+		changed := false
+		for i := 0; i < len(s.Gauge); i++ {
+			if s.Gauge[i].Name == gauge[0] {
+				val, err := strconv.ParseFloat(gauge[1], 64)
+				if err != nil {
+					return err
+				}
+				s.Gauge[i].Value = val
+				changed = true
+			}
+		}
+
+		if !changed {
+			var metric Gauge
+			metric.Name = gauge[0]
+			val, err := strconv.ParseFloat(gauge[1], 64)
+			if err != nil {
+				return err
+			}
+			metric.Value = val
+			s.Gauge = append(s.Gauge, metric)
+		}
+
+	}
+
+	for _, counter := range counters {
+
+		changed := false
+		for i := 0; i < len(s.Counter); i++ {
+			if s.Counter[i].Name == counter[0] {
+				val, err := strconv.ParseInt(counter[1], 0, 64)
+				if err != nil {
+					return err
+				}
+				s.Counter[i].Value = val + s.Counter[i].Value
+				changed = true
+			}
+		}
+
+		if !changed {
+			var metric Counter
+			metric.Name = counter[0]
+			val, err := strconv.ParseInt(counter[1], 0, 64)
+			if err != nil {
+				return err
+			}
+			metric.Value = int64(val)
+			s.Counter = append(s.Counter, metric)
+		}
+	}
+
+	return nil
 }

@@ -12,11 +12,14 @@ import (
 	"github.com/mbiwapa/metric/internal/logger"
 	"github.com/mbiwapa/metric/internal/server/backuper"
 	"github.com/mbiwapa/metric/internal/server/handlers/home"
+	"github.com/mbiwapa/metric/internal/server/handlers/ping"
 	"github.com/mbiwapa/metric/internal/server/handlers/update"
+	"github.com/mbiwapa/metric/internal/server/handlers/updates"
 	"github.com/mbiwapa/metric/internal/server/handlers/value"
 	"github.com/mbiwapa/metric/internal/server/middleware/decompressor"
 	mwLogger "github.com/mbiwapa/metric/internal/server/middleware/logger"
 	"github.com/mbiwapa/metric/internal/storage/memstorage"
+	"github.com/mbiwapa/metric/internal/storage/postgre"
 )
 
 func main() {
@@ -37,27 +40,44 @@ func main() {
 		os.Exit(1)
 	}
 
-	backup, err := backuper.New(
-		storage,
-		config.StoreInterval,
-		config.StoragePath,
-		logger)
+	var pgstorage *postgre.Storage
+	if config.DatabaseDSN != "" {
+		pgstorage, err = postgre.New(config.DatabaseDSN)
+		if err != nil {
+			logger.Error("Can't create postgree storage", zap.Error(err))
+			os.Exit(1)
+		}
+		defer pgstorage.Close()
+	}
+
+	//FIXME спросить у ментора вариант получше. Выглядит так себе полное повторение кода.
+	var backup *backuper.Buckuper
+	if config.DatabaseDSN == "" {
+		backup, err = backuper.New(
+			storage,
+			config.StoreInterval,
+			config.StoragePath,
+			logger)
+	} else {
+		backup, err = backuper.New(
+			pgstorage,
+			config.StoreInterval,
+			config.StoragePath,
+			logger)
+	}
 	if err != nil {
 		logger.Error("Can't create saver", zap.Error(err))
 		os.Exit(1)
 	}
 	defer backup.SaveToFile()
-
 	if config.Restore {
 		backup.Restore()
 	}
-
 	if config.StoreInterval > 0 {
 		go backup.Start()
 	}
 
 	router := chi.NewRouter()
-
 	router.Use(
 		middleware.RequestID,
 		mwLogger.New(logger),
@@ -65,15 +85,24 @@ func main() {
 		middleware.Compress(5, "application/json", "text/html"),
 		decompressor.New(logger),
 	)
-
-	router.Route("/update", func(r chi.Router) {
-		r.Post("/", undefinedType)
-		r.Post("/{type}/{name}/{value}", update.New(logger, storage, backup))
-	})
-	router.Post("/update/", update.NewJSON(logger, storage, backup))
-	router.Get("/value/{type}/{name}", value.New(logger, storage))
-	router.Post("/value/", value.NewJSON(logger, storage))
-	router.Get("/", home.New(logger, storage))
+	router.Post("/", undefinedType)
+	//FIXME спросить у ментора вариант получше. Выглядит так себе полное повторение кода.
+	if config.DatabaseDSN == "" {
+		router.Post("/update/{type}/{name}/{value}", update.New(logger, storage, backup))
+		router.Post("/update/", update.NewJSON(logger, storage, backup))
+		router.Get("/value/{type}/{name}", value.New(logger, storage))
+		router.Post("/value/", value.NewJSON(logger, storage))
+		router.Get("/", home.New(logger, storage))
+		router.Post("/updates/", updates.NewJSON(logger, storage, backup))
+	} else {
+		router.Post("/{type}/{name}/{value}", update.New(logger, pgstorage, backup))
+		router.Post("/update/", update.NewJSON(logger, pgstorage, backup))
+		router.Get("/value/{type}/{name}", value.New(logger, pgstorage))
+		router.Post("/value/", value.NewJSON(logger, pgstorage))
+		router.Get("/", home.New(logger, pgstorage))
+		router.Get("/ping", ping.New(logger, pgstorage))
+		router.Post("/updates/", updates.NewJSON(logger, pgstorage, backup))
+	}
 
 	srv := &http.Server{
 		Addr:    config.Addr,

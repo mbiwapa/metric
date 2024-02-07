@@ -122,12 +122,12 @@ func TestNew(t *testing.T) {
 
 			if tt.wantStatus == http.StatusOK || tt.mockError != nil {
 				if tt.typ == "gauge" {
-					UpdaterMock.On("UpdateGauge", mock.AnythingOfType("string"), mock.AnythingOfType("float64")).
+					UpdaterMock.On("UpdateGauge", mock.Anything, mock.AnythingOfType("string"), mock.AnythingOfType("float64")).
 						Return(tt.mockError).
 						Once()
 				}
 				if tt.typ == "counter" {
-					UpdaterMock.On("UpdateCounter", mock.AnythingOfType("string"), mock.AnythingOfType("int64")).
+					UpdaterMock.On("UpdateCounter", mock.Anything, mock.AnythingOfType("string"), mock.AnythingOfType("int64")).
 						Return(tt.mockError).
 						Once()
 				}
