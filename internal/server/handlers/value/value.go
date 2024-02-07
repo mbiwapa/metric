@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/middleware"
 	"go.uber.org/zap"
 
+	"github.com/mbiwapa/metric/internal/lib/signature"
 	storageErrors "github.com/mbiwapa/metric/internal/storage"
 )
 
@@ -21,7 +22,7 @@ type MetricGeter interface {
 }
 
 // New возвращает обработчик для вывода метрики
-func New(log *zap.Logger, storage MetricGeter) http.HandlerFunc {
+func New(log *zap.Logger, storage MetricGeter, sha256key string) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		const op = "handlers.value.New"
@@ -59,6 +60,11 @@ func New(log *zap.Logger, storage MetricGeter) http.HandlerFunc {
 			log.Error("Failed to get metric", zap.Error(err))
 			w.WriteHeader(http.StatusInternalServerError)
 			return
+		}
+
+		if sha256key != "" {
+			hashStr := signature.GetHash(sha256key, string(value), log)
+			w.Header().Set("HashSHA256", hashStr)
 		}
 
 		w.Write([]byte(value))

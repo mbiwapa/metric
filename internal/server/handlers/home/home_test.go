@@ -61,7 +61,7 @@ func TestNew(t *testing.T) {
 
 			r := chi.NewRouter()
 			r.Use(middleware.URLFormat)
-			r.Get("/", New(logger, AllMetricGeterMock))
+			r.Get("/", New(logger, AllMetricGeterMock, ""))
 			ts := httptest.NewServer(r)
 			defer ts.Close()
 

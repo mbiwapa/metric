@@ -18,6 +18,7 @@ import (
 	"github.com/mbiwapa/metric/internal/server/handlers/value"
 	"github.com/mbiwapa/metric/internal/server/middleware/decompressor"
 	mwLogger "github.com/mbiwapa/metric/internal/server/middleware/logger"
+	signatureCheck "github.com/mbiwapa/metric/internal/server/middleware/signature/check"
 	"github.com/mbiwapa/metric/internal/storage/memstorage"
 	"github.com/mbiwapa/metric/internal/storage/postgre"
 )
@@ -84,24 +85,25 @@ func main() {
 		middleware.URLFormat,
 		middleware.Compress(5, "application/json", "text/html"),
 		decompressor.New(logger),
+		signatureCheck.New(config.Key, logger),
 	)
 	router.Post("/", undefinedType)
 	//FIXME спросить у ментора вариант получше. Выглядит так себе полное повторение кода.
 	if config.DatabaseDSN == "" {
 		router.Post("/update/{type}/{name}/{value}", update.New(logger, storage, backup))
-		router.Post("/update/", update.NewJSON(logger, storage, backup))
-		router.Get("/value/{type}/{name}", value.New(logger, storage))
-		router.Post("/value/", value.NewJSON(logger, storage))
-		router.Get("/", home.New(logger, storage))
-		router.Post("/updates/", updates.NewJSON(logger, storage, backup))
+		router.Post("/update/", update.NewJSON(logger, storage, backup, config.Key))
+		router.Get("/value/{type}/{name}", value.New(logger, storage, config.Key))
+		router.Post("/value/", value.NewJSON(logger, storage, config.Key))
+		router.Get("/", home.New(logger, storage, config.Key))
+		router.Post("/updates/", updates.NewJSON(logger, storage, backup, config.Key))
 	} else {
 		router.Post("/{type}/{name}/{value}", update.New(logger, pgstorage, backup))
-		router.Post("/update/", update.NewJSON(logger, pgstorage, backup))
-		router.Get("/value/{type}/{name}", value.New(logger, pgstorage))
-		router.Post("/value/", value.NewJSON(logger, pgstorage))
-		router.Get("/", home.New(logger, pgstorage))
+		router.Post("/update/", update.NewJSON(logger, pgstorage, backup, config.Key))
+		router.Get("/value/{type}/{name}", value.New(logger, pgstorage, config.Key))
+		router.Post("/value/", value.NewJSON(logger, pgstorage, config.Key))
+		router.Get("/", home.New(logger, pgstorage, config.Key))
 		router.Get("/ping", ping.New(logger, pgstorage))
-		router.Post("/updates/", updates.NewJSON(logger, pgstorage, backup))
+		router.Post("/updates/", updates.NewJSON(logger, pgstorage, backup, config.Key))
 	}
 
 	srv := &http.Server{

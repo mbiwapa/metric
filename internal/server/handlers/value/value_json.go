@@ -12,11 +12,12 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/mbiwapa/metric/internal/lib/api/format"
+	"github.com/mbiwapa/metric/internal/lib/signature"
 	storageErrors "github.com/mbiwapa/metric/internal/storage"
 )
 
 // NewJSON возвращает обработчик для вывода метрики
-func NewJSON(log *zap.Logger, storage MetricGeter) http.HandlerFunc {
+func NewJSON(log *zap.Logger, storage MetricGeter, sha256key string) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		const op = "handlers.value.NewJSON"
@@ -84,11 +85,18 @@ func NewJSON(log *zap.Logger, storage MetricGeter) http.HandlerFunc {
 		default:
 		}
 		w.Header().Set("Content-Type", "application/json")
-		enc := json.NewEncoder(w)
-		if err := enc.Encode(metricRequest); err != nil {
+		body, err := json.Marshal(metricRequest)
+		if err != nil {
 			log.Error("Error encoding response", zap.Error(err))
 			return
 		}
+
+		if sha256key != "" {
+			hashStr := signature.GetHash(sha256key, string(body), log)
+			w.Header().Set("HashSHA256", hashStr)
+		}
+
+		w.Write(body)
 		w.WriteHeader(http.StatusOK)
 	}
 }

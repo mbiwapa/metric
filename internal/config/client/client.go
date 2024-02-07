@@ -5,16 +5,15 @@ import (
 	"fmt"
 	"os"
 	"strconv"
-
-	"github.com/mbiwapa/metric/internal/agent/collector"
 )
 
 // Config Структура со всеми конфигурациями сервера
 type Config struct {
-	Addr              string
-	ReportInterval    int64
-	PollInterval      int64
-	ObservableMetrics []collector.ObservableMetric
+	Addr           string
+	ReportInterval int64
+	PollInterval   int64
+	Key            string
+	WorkerCount    int
 }
 
 // MustLoadConfig загрузка конфигурации
@@ -22,16 +21,22 @@ func MustLoadConfig() (*Config, error) {
 	var Addr string
 	var PollInterval int64
 	var ReportInterval int64
+	var Key string
 	var err error
+	var WorkerCount int
 
 	flag.StringVar(&Addr, "a", "localhost:8080", "Адрес  и порт сервера по сбору метрик")
 	flag.Int64Var(&ReportInterval, "r", 10, "Частота отправки метрик на сервер (по умолчанию 10 секунд)")
 	flag.Int64Var(&PollInterval, "p", 2, "Частота опроса метрик из источника (по умолчанию 2 секунды)")
+	flag.StringVar(&Key, "k", "", "Ключ для вычисления хеша")
+	flag.IntVar(&WorkerCount, "l", 1, "Количество потоков для отправки метрик (по умолчанию 1 поток)")
 	flag.Parse()
 
 	envAddr := os.Getenv("ADDRESS")
 	envPollInterval := os.Getenv("REPORT_INTERVAL")
 	envReportInterval := os.Getenv("POLL_INTERVAL")
+	envWorkerCount := os.Getenv("RATE_LIMIT")
+	envKey := os.Getenv("KEY")
 	if envAddr != "" {
 		Addr = envAddr
 	}
@@ -47,47 +52,23 @@ func MustLoadConfig() (*Config, error) {
 			return nil, fmt.Errorf("invalid env value: %s. %s", envReportInterval, err)
 		}
 	}
+	if envKey != "" {
+		Key = envKey
+	}
+	if envWorkerCount != "" {
+		WorkerCount, err = strconv.Atoi(envWorkerCount)
+		if err != nil && envWorkerCount != "" {
+			return nil, fmt.Errorf("invalid env value: %s. %s", envWorkerCount, err)
+		}
+	}
 
 	cfg := &Config{
-		ObservableMetrics: getObservableMetrics(),
-		Addr:              "http://" + Addr,
-		PollInterval:      PollInterval,
-		ReportInterval:    ReportInterval,
+		Addr:           "http://" + Addr,
+		PollInterval:   PollInterval,
+		ReportInterval: ReportInterval,
+		Key:            Key,
+		WorkerCount:    WorkerCount,
 	}
 
 	return cfg, nil
-}
-
-// getObservableMetrics возвращает список метрик для отслеживание агентом
-func getObservableMetrics() []collector.ObservableMetric {
-	observableMetrics := []collector.ObservableMetric{
-		{Name: "Frees", SourceType: "uint"},
-		{Name: "Alloc", SourceType: "uint"},
-		{Name: "BuckHashSys", SourceType: "uint"},
-		{Name: "GCCPUFraction", SourceType: "float"},
-		{Name: "GCSys", SourceType: "uint"},
-		{Name: "HeapAlloc", SourceType: "uint"},
-		{Name: "HeapIdle", SourceType: "uint"},
-		{Name: "HeapInuse", SourceType: "uint"},
-		{Name: "HeapObjects", SourceType: "uint"},
-		{Name: "HeapReleased", SourceType: "uint"},
-		{Name: "HeapSys", SourceType: "uint"},
-		{Name: "LastGC", SourceType: "uint"},
-		{Name: "Lookups", SourceType: "uint"},
-		{Name: "MCacheInuse", SourceType: "uint"},
-		{Name: "MCacheSys", SourceType: "uint"},
-		{Name: "MSpanInuse", SourceType: "uint"},
-		{Name: "MSpanSys", SourceType: "uint"},
-		{Name: "Mallocs", SourceType: "uint"},
-		{Name: "NextGC", SourceType: "uint"},
-		{Name: "NumForcedGC", SourceType: "uint"},
-		{Name: "NumGC", SourceType: "uint"},
-		{Name: "OtherSys", SourceType: "uint"},
-		{Name: "PauseTotalNs", SourceType: "uint"},
-		{Name: "StackInuse", SourceType: "uint"},
-		{Name: "StackSys", SourceType: "uint"},
-		{Name: "Sys", SourceType: "uint"},
-		{Name: "TotalAlloc", SourceType: "uint"},
-	}
-	return observableMetrics
 }
