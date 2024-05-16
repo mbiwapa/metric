@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/middleware"
+	"github.com/mbiwapa/metric/internal/lib/signature"
 	"go.uber.org/zap"
 )
 
@@ -17,13 +18,13 @@ type AllMetricGeter interface {
 }
 
 // New возвращает обработчик возвращающий HTML страницу со всеми доступными
-func New(log *zap.Logger, storage AllMetricGeter) http.HandlerFunc {
+func New(log *zap.Logger, storage AllMetricGeter, sha256key string) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		const op = "handlers.home.New"
 
 		ctx := r.Context()
-		log.With(
+		log = log.With(
 			zap.String("op", op),
 			zap.String("request_id", middleware.GetReqID(ctx)),
 		)
@@ -54,6 +55,11 @@ func New(log *zap.Logger, storage AllMetricGeter) http.HandlerFunc {
 
 		body += "</ul></body></html>"
 		w.Header().Set("Content-Type", "text/html")
+
+		if sha256key != "" {
+			hashStr := signature.GetHash(sha256key, body, log)
+			w.Header().Set("HashSHA256", hashStr)
+		}
 
 		w.Write([]byte(body))
 	}

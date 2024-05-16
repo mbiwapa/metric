@@ -11,10 +11,11 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/mbiwapa/metric/internal/lib/api/format"
+	"github.com/mbiwapa/metric/internal/lib/signature"
 )
 
 // NewJSON returned func for update
-func NewJSON(log *zap.Logger, storage Updater, backup Backuper) http.HandlerFunc {
+func NewJSON(log *zap.Logger, storage Updater, backup Backuper, sha256key string) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		const op = "handlers.update.NewJSON"
@@ -78,11 +79,18 @@ func NewJSON(log *zap.Logger, storage Updater, backup Backuper) http.HandlerFunc
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		enc := json.NewEncoder(w)
-		if err := enc.Encode(metricRequest); err != nil {
+		body, err := json.Marshal(metricRequest)
+		if err != nil {
 			log.Error("Error encoding response", zap.Error(err))
 			return
 		}
+
+		if sha256key != "" {
+			hashStr := signature.GetHash(sha256key, string(body), log)
+			w.Header().Set("HashSHA256", hashStr)
+		}
+
+		w.Write(body)
 
 		if backup.IsSyncMode() {
 			var backupVal string

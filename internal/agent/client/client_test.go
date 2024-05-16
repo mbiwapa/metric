@@ -48,7 +48,7 @@ func TestClient_Send(t *testing.T) {
 				panic("Logger initialization error: " + err.Error())
 			}
 
-			c, err := New(srv.URL, logger)
+			c, err := New(srv.URL, "", logger)
 
 			require.NoError(t, err)
 
