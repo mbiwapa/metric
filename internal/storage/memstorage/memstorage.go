@@ -74,12 +74,12 @@ func (s *Storage) UpdateCounter(_ context.Context, key string, value int64) erro
 
 // GetAllMetrics Возвращает слайс метрик 2 типов gauge и counter
 func (s *Storage) GetAllMetrics(_ context.Context) ([][]string, [][]string, error) {
-	gauge := make([][]string, 0, 30)
+	gauge := make([][]string, 0, 40)
 	for _, metric := range s.Gauge {
 		value := []string{metric.Name, strconv.FormatFloat(metric.Value, 'f', -1, 64)}
 		gauge = append(gauge, value)
 	}
-	counter := make([][]string, 0, 5)
+	counter := make([][]string, 0, 2)
 	for _, metric := range s.Counter {
 		value := []string{metric.Name, strconv.FormatInt(metric.Value, 10)}
 		counter = append(counter, value)

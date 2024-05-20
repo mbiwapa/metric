@@ -1,7 +1,11 @@
 package main
 
 import (
+	"context"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"go.uber.org/zap"
 
@@ -16,6 +20,9 @@ import (
 )
 
 func main() {
+
+	mainCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
 	conf, err := config.MustLoadConfig()
 	if err != nil {
@@ -58,8 +65,17 @@ func main() {
 
 	sender.Start(storage, client, conf.ReportInterval, logger, conf.WorkerCount, errorChanel)
 
-	for err := range errorChanel {
-		logger.Error("Error:", zap.Error(err))
-	}
+	go func() {
+		// Перехватываем ошибки у воркеров
+		for err = range errorChanel {
+			logger.Error("Error:", zap.Error(err))
+		}
+	}()
+
+	<-mainCtx.Done()
+
+	// Если придёт сигнал остановки в контекст, ждем 3 секунды завершения всех горутин и прощаемся
+	time.Sleep(3 * time.Second)
+	logger.Info("Good bye!")
 
 }

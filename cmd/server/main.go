@@ -1,8 +1,12 @@
 package main
 
 import (
+	"context"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
@@ -24,6 +28,9 @@ import (
 )
 
 func main() {
+
+	mainCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
 	config := config.MustLoadConfig()
 
@@ -111,11 +118,19 @@ func main() {
 		Handler: router,
 	}
 
-	err = srv.ListenAndServe()
-	if err != nil {
-		logger.Error("The server did not start!", zap.Error(err))
-		os.Exit(1)
-	}
+	go func() {
+		err = srv.ListenAndServe()
+		if err != nil {
+			logger.Error("The server did not start!", zap.Error(err))
+			os.Exit(1)
+		}
+	}()
+
+	<-mainCtx.Done()
+
+	// Если придёт сигнал остановки в контекст, ждем 3 секунды завершения всех горутин и прощаемся
+	time.Sleep(3 * time.Second)
+	logger.Info("Good bye!")
 }
 
 // undefinedType func return error fo undefined metric type request
