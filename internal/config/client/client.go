@@ -7,16 +7,21 @@ import (
 	"strconv"
 )
 
-// Config Структура со всеми конфигурациями сервера
+// Config holds all the server configurations.
 type Config struct {
-	Addr           string
-	ReportInterval int64
-	PollInterval   int64
-	Key            string
-	WorkerCount    int
+	Addr           string // Server address and port for metric collection
+	ReportInterval int64  // Frequency of sending metrics to the server (in seconds)
+	PollInterval   int64  // Frequency of polling metrics from the source (in seconds)
+	Key            string // Key for hash computation
+	WorkerCount    int    // Number of threads for sending metrics
 }
 
-// MustLoadConfig загрузка конфигурации
+// MustLoadConfig loads the configuration from command-line flags and environment variables.
+// It returns a pointer to a Config struct and an error if any invalid values are encountered.
+//
+// Returns:
+//   - *Config: A pointer to the loaded configuration struct.
+//   - error: An error if any invalid values are encountered.
 func MustLoadConfig() (*Config, error) {
 	var Addr string
 	var PollInterval int64
@@ -25,6 +30,7 @@ func MustLoadConfig() (*Config, error) {
 	var err error
 	var WorkerCount int
 
+	// Define command-line flags
 	flag.StringVar(&Addr, "a", "localhost:8080", "Адрес  и порт сервера по сбору метрик")
 	flag.Int64Var(&ReportInterval, "r", 10, "Частота отправки метрик на сервер (по умолчанию 10 секунд)")
 	flag.Int64Var(&PollInterval, "p", 2, "Частота опроса метрик из источника (по умолчанию 2 секунды)")
@@ -32,6 +38,7 @@ func MustLoadConfig() (*Config, error) {
 	flag.IntVar(&WorkerCount, "l", 1, "Количество потоков для отправки метрик (по умолчанию 1 поток)")
 	flag.Parse()
 
+	// Override with environment variables if they are set
 	envAddr := os.Getenv("ADDRESS")
 	envPollInterval := os.Getenv("REPORT_INTERVAL")
 	envReportInterval := os.Getenv("POLL_INTERVAL")
@@ -62,6 +69,7 @@ func MustLoadConfig() (*Config, error) {
 		}
 	}
 
+	// Create the configuration struct
 	cfg := &Config{
 		Addr:           "http://" + Addr,
 		PollInterval:   PollInterval,

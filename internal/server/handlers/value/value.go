@@ -18,10 +18,24 @@ import (
 //
 //go:generate go run github.com/vektra/mockery/v2@v2.28.2 --name=MetricGeter
 type MetricGeter interface {
+	// GetMetric retrieves a metric value from the storage.
+	// Parameters:
+	// - ctx: context for managing request deadlines and cancellation signals.
+	// - typ: type of the metric.
+	// - key: name of the metric.
+	// Returns:
+	// - string: the value of the metric.
+	// - error: error if the metric is not found or any other issue occurs.
 	GetMetric(ctx context.Context, typ string, key string) (string, error)
 }
 
-// New возвращает обработчик для вывода метрики
+// New returns an HTTP handler function for retrieving a metric value.
+// Parameters:
+// - log: logger for logging information and errors.
+// - storage: an implementation of the MetricGeter interface for accessing metrics.
+// - sha256key: a key used for generating SHA256 hash of the metric value.
+// Returns:
+// - http.HandlerFunc: the HTTP handler function.
 func New(log *zap.Logger, storage MetricGeter, sha256key string) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {

@@ -1,6 +1,7 @@
 package value
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -79,4 +80,26 @@ func TestNew(t *testing.T) {
 			require.Equal(t, resp.StatusCode, tt.wantStatus)
 		})
 	}
+}
+
+func ExampleNew() {
+	logger, _ := logger.New("info")
+
+	mockMetricGeter := &mocks.MetricGeter{}
+	mockMetricGeter.On("GetMetric", mock.Anything, "gauge", "test1").Return("1", nil)
+
+	r := chi.NewRouter()
+	r.Use(middleware.URLFormat)
+	r.Get("/value/{type}/{name}", New(logger, mockMetricGeter, ""))
+
+	req, _ := http.NewRequest(http.MethodGet, "/value/gauge/test1", nil)
+	rr := httptest.NewRecorder()
+
+	r.ServeHTTP(rr, req)
+	fmt.Println(rr.Code)
+	fmt.Println(rr.Body.String())
+
+	// Output:
+	// 200
+	// 1
 }

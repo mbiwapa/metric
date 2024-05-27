@@ -1,3 +1,5 @@
+// Package main is the entry point of the application. It initializes the configuration, logger, storage, and backup mechanisms.
+// It also sets up the HTTP server with appropriate routes and middleware, and handles graceful shutdown on receiving termination signals.
 package main
 
 import (
@@ -27,27 +29,33 @@ import (
 	"github.com/mbiwapa/metric/internal/storage/postgre"
 )
 
+// main is the entry point of the application. It initializes the configuration, logger, storage, and backup mechanisms.
+// It also sets up the HTTP server with appropriate routes and middleware, and handles graceful shutdown on receiving termination signals.
 func main() {
 
+	// Create a context that listens for the interrupt signal from the OS.
 	mainCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
+	// Load configuration settings.
 	config := config.MustLoadConfig()
 
+	// Initialize the logger.
 	logger, err := logger.New("info")
-
 	if err != nil {
 		panic("Logger initialization error: " + err.Error())
 	}
 
 	logger.Info("Start service!")
 
+	// Initialize in-memory storage.
 	storage, err := memstorage.New()
 	if err != nil {
 		logger.Error("Can't create storage", zap.Error(err))
 		os.Exit(1)
 	}
 
+	// Initialize PostgreSQL storage if DatabaseDSN is provided.
 	var pgstorage *postgre.Storage
 	if config.DatabaseDSN != "" {
 		pgstorage, err = postgre.New(config.DatabaseDSN)
@@ -58,7 +66,7 @@ func main() {
 		defer pgstorage.Close()
 	}
 
-	//FIXME спросить у ментора вариант получше. Выглядит так себе полное повторение кода.
+	// Initialize the backup mechanism.
 	var backup *backuper.Buckuper
 	if config.DatabaseDSN == "" {
 		backup, err = backuper.New(
@@ -85,6 +93,7 @@ func main() {
 		go backup.Start()
 	}
 
+	// Set up the HTTP router and middleware.
 	router := chi.NewRouter()
 	router.Use(
 		middleware.RequestID,
@@ -95,7 +104,8 @@ func main() {
 		signatureCheck.New(config.Key, logger),
 	)
 	router.Post("/", undefinedType)
-	//FIXME спросить у ментора вариант получше. Выглядит так себе полное повторение кода.
+
+	// Set up routes based on the storage type.
 	if config.DatabaseDSN == "" {
 		router.Post("/update/{type}/{name}/{value}", update.New(logger, storage, backup))
 		router.Post("/update/", update.NewJSON(logger, storage, backup, config.Key))
@@ -113,6 +123,7 @@ func main() {
 		router.Post("/updates/", updates.NewJSON(logger, pgstorage, backup, config.Key))
 	}
 
+	// Create and start the HTTP server.
 	srv := &http.Server{
 		Addr:    config.Addr,
 		Handler: router,
@@ -126,14 +137,15 @@ func main() {
 		}
 	}()
 
+	// Wait for the termination signal.
 	<-mainCtx.Done()
 
-	// Если придёт сигнал остановки в контекст, ждем 3 секунды завершения всех горутин и прощаемся
+	// Wait for 3 seconds to allow graceful shutdown of goroutines.
 	time.Sleep(3 * time.Second)
 	logger.Info("Good bye!")
 }
 
-// undefinedType func return error fo undefined metric type request
+// undefinedType handles requests with undefined metric types by returning a 400 Bad Request status.
 func undefinedType(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusBadRequest)
 }

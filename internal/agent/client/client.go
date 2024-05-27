@@ -1,3 +1,6 @@
+// Package client provides a client that sends metrics to a server.
+// It contains the necessary configurations such as URL, HTTP client, logger, compressor, and a key for hash generation.
+// It also provides functions to send metrics to the server and to run a worker that continuously reads jobs from a channel and sends the metrics using the Send method.
 package client
 
 import (
@@ -15,16 +18,27 @@ import (
 	"github.com/mbiwapa/metric/internal/lib/signature"
 )
 
-// Client структура возвращаемая для работы, клиент
+// Client represents a client that sends metrics to a server.
+// It contains the necessary configurations such as URL, HTTP client, logger, compressor, and a key for hash generation.
 type Client struct {
-	URL        string
-	Client     *http.Client
-	Logger     *zap.Logger
-	Compressor *compressor.Compressor
-	Key        string //ключ для вычисления хеша sha256
+	URL        string                 // URL is the base URL for the client to send requests to.
+	Client     *http.Client           // Client is the HTTP client used to send requests.
+	Logger     *zap.Logger            // Logger is used for logging purposes.
+	Compressor *compressor.Compressor // Compressor is used to compress the data before sending.
+	Key        string                 // Key is used for generating SHA256 hashes for request validation.
 }
 
-// New возвращает эксземпляр клиента
+// New initializes and returns a new instance of the Client struct.
+// It sets up the URL, HTTP client, logger, compressor, and key for the client.
+//
+// Parameters:
+//   - url: The base URL for the client to send requests to.
+//   - key: The key used for generating SHA256 hashes for request validation.
+//   - logger: A zap.Logger instance for logging purposes.
+//
+// Returns:
+//   - *Client: A pointer to the newly created Client instance.
+//   - error: An error if there is an issue during the creation of the Client instance.
 func New(url string, key string, logger *zap.Logger) (*Client, error) {
 	var client Client
 	client.URL = url
@@ -38,7 +52,14 @@ func New(url string, key string, logger *zap.Logger) (*Client, error) {
 	return &client, nil
 }
 
-// Send отправляет метрику на сервер
+// Send sends metrics to the server. It takes gauge and counter metrics, processes them, compresses the data, and sends it to the server with retry logic.
+//
+// Parameters:
+//   - gauges: A slice of slices containing gauge metrics, where each inner slice contains the metric ID and value as strings.
+//   - counters: A slice of slices containing counter metrics, where each inner slice contains the metric ID and value as strings.
+//
+// Returns:
+//   - error: An error if there is an issue during the processing or sending of the metrics.
 func (c *Client) Send(gauges [][]string, counters [][]string) error {
 	const op = "http-client.send.Send"
 	logger := c.Logger.With(zap.String("op", op))
@@ -128,7 +149,11 @@ func (c *Client) Send(gauges [][]string, counters [][]string) error {
 	return nil
 }
 
-// Worker отправляет метрику на сервер в режиме потока
+// Worker sends metrics to the server in a streaming mode. It continuously reads jobs from the provided channel and sends the metrics using the Send method.
+//
+// Parameters:
+//   - jobs: A channel that provides jobs, where each job is a map containing gauge and counter metrics.
+//   - errorChanel: A channel to send errors if there is an issue during the processing or sending of the metrics.
 func (c *Client) Worker(jobs <-chan map[string][][]string, errorChanel chan<- error) {
 	for j := range jobs {
 		err := c.Send(j["gauge"], j["counter"])

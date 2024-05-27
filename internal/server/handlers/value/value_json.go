@@ -16,7 +16,16 @@ import (
 	storageErrors "github.com/mbiwapa/metric/internal/storage"
 )
 
-// NewJSON возвращает обработчик для вывода метрики
+// NewJSON returns an HTTP handler function that processes metric requests and responds with the metric data in JSON format.
+// It logs the request, decodes the JSON body, retrieves the metric from storage, and writes the response.
+//
+// Parameters:
+// - log: A zap.Logger instance for logging.
+// - storage: An implementation of the MetricGeter interface for retrieving metrics from storage.
+// - sha256key: A string key used for generating SHA256 hash of the response body.
+//
+// Returns:
+// - An http.HandlerFunc that handles the HTTP request and response.
 func NewJSON(log *zap.Logger, storage MetricGeter, sha256key string) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -30,6 +39,7 @@ func NewJSON(log *zap.Logger, storage MetricGeter, sha256key string) http.Handle
 
 		var metricRequest format.Metric
 
+		// Decode the JSON request body into metricRequest
 		dec := json.NewDecoder(r.Body)
 		if err := dec.Decode(&metricRequest); err != nil {
 			log.Error(
@@ -38,6 +48,7 @@ func NewJSON(log *zap.Logger, storage MetricGeter, sha256key string) http.Handle
 			return
 		}
 
+		// Validate the metric request
 		if metricRequest.ID == "" || metricRequest.MType == "" {
 			log.Error(
 				"Name or Type is empty!",
@@ -47,9 +58,11 @@ func NewJSON(log *zap.Logger, storage MetricGeter, sha256key string) http.Handle
 			return
 		}
 
+		// Create a context with a timeout for the database operation
 		databaseCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		defer cancel()
 
+		// Retrieve the metric value from storage
 		value, err := storage.GetMetric(databaseCtx, metricRequest.MType, metricRequest.ID)
 		if errors.Is(err, storageErrors.ErrMetricNotFound) {
 			log.Info(
@@ -65,6 +78,7 @@ func NewJSON(log *zap.Logger, storage MetricGeter, sha256key string) http.Handle
 			return
 		}
 
+		// Parse the metric value based on its type
 		switch metricRequest.MType {
 		case format.Gauge:
 			val, err := strconv.ParseFloat(value, 64)
@@ -84,18 +98,24 @@ func NewJSON(log *zap.Logger, storage MetricGeter, sha256key string) http.Handle
 			metricRequest.Delta = &val
 		default:
 		}
+
+		// Set the response content type to JSON
 		w.Header().Set("Content-Type", "application/json")
+
+		// Marshal the metric request into JSON
 		body, err := json.Marshal(metricRequest)
 		if err != nil {
 			log.Error("Error encoding response", zap.Error(err))
 			return
 		}
 
+		// If a SHA256 key is provided, generate and set the hash header
 		if sha256key != "" {
 			hashStr := signature.GetHash(sha256key, string(body), log)
 			w.Header().Set("HashSHA256", hashStr)
 		}
 
+		// Write the response body and set the status code to OK
 		w.Write(body)
 		w.WriteHeader(http.StatusOK)
 	}

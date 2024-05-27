@@ -1,3 +1,6 @@
+// Package postgre provides a PostgreSQL storage implementation for metrics.
+// It includes methods for connecting to the database, performing CRUD operations on metrics,
+// and handling retries with backoff strategies in case of failures.
 package postgre
 
 import (
@@ -18,11 +21,23 @@ import (
 )
 
 // Storage structure for storage
+// The Storage struct encapsulates a connection to a PostgreSQL database.
+// It provides methods to interact with the database, such as creating, updating, and retrieving metrics.
 type Storage struct {
-	db *sql.DB
+	db *sql.DB // db is a pointer to the sql.DB instance representing the database connection.
 }
 
-// New return a new Storage instance.
+// New returns a new Storage instance.
+// It attempts to connect to the PostgreSQL database using the provided DSN (Data Source Name).
+// If the connection is successful, it creates the 'metric' table if it does not already exist.
+// The function retries the connection and table creation up to 4 times with a backoff strategy in case of failure.
+//
+// Parameters:
+// - dsn: The Data Source Name for connecting to the PostgreSQL database.
+//
+// Returns:
+// - A pointer to the Storage instance.
+// - An error if the connection or table creation fails.
 func New(dsn string) (*Storage, error) {
 	const op = "storage.postgre.New"
 
@@ -36,9 +51,9 @@ func New(dsn string) (*Storage, error) {
 		}
 
 		stmt, err := db.Prepare(`CREATE TABLE IF NOT EXISTS metric (
-		name TEXT PRIMARY KEY,
-		gauge DOUBLE PRECISION NOT NULL DEFAULT 0,
-		counter BIGINT NOT NULL DEFAULT 0);`)
+        name TEXT PRIMARY KEY,
+        gauge DOUBLE PRECISION NOT NULL DEFAULT 0,
+        counter BIGINT NOT NULL DEFAULT 0);`)
 		if err != nil {
 			return fmt.Errorf("%s: %w", op, err)
 		}
@@ -62,7 +77,14 @@ func New(dsn string) (*Storage, error) {
 	return &storage, nil
 }
 
-// Ping checks connection to the database
+// Ping checks the connection to the database.
+// It retries the ping operation up to 4 times with a backoff strategy in case of failure.
+//
+// Parameters:
+// - ctx: The context for the ping operation.
+//
+// Returns:
+// - An error if the ping operation fails.
 func (s *Storage) Ping(ctx context.Context) error {
 	const op = "storage.postgre.Ping"
 	action := func(attempt uint) error {
@@ -86,12 +108,21 @@ func (s *Storage) Ping(ctx context.Context) error {
 	return nil
 }
 
-// Close closes the connection to the database
+// Close closes the connection to the database.
 func (s *Storage) Close() {
 	s.db.Close()
 }
 
-// UpdateGauge saves the given Gauge metric to the memory.
+// UpdateGauge saves the given Gauge metric to the database.
+// It retries the update operation up to 4 times with a backoff strategy in case of failure.
+//
+// Parameters:
+// - ctx: The context for the update operation.
+// - key: The name of the metric.
+// - value: The value of the gauge metric.
+//
+// Returns:
+// - An error if the update operation fails.
 func (s *Storage) UpdateGauge(ctx context.Context, key string, value float64) error {
 	const op = "storage.postgre.UpdateGauge"
 	action := func(attempt uint) error {
@@ -121,7 +152,17 @@ func (s *Storage) UpdateGauge(ctx context.Context, key string, value float64) er
 	return nil
 }
 
-// UpdateCounter saves the given Counter metric to the memory.
+// UpdateCounter saves the given Counter metric to the database.
+// It retrieves the current value of the counter metric, adds the new value to it, and updates the database.
+// It retries the update operation up to 4 times with a backoff strategy in case of failure.
+//
+// Parameters:
+// - ctx: The context for the update operation.
+// - key: The name of the metric.
+// - value: The value of the counter metric.
+//
+// Returns:
+// - An error if the update operation fails.
 func (s *Storage) UpdateCounter(ctx context.Context, key string, value int64) error {
 	const op = "storage.postgre.UpdateCounter"
 	action := func(attempt uint) error {
@@ -166,7 +207,16 @@ func (s *Storage) UpdateCounter(ctx context.Context, key string, value int64) er
 	return nil
 }
 
-// GetAllMetrics Возвращает слайс метрик 2 типов gauge и counter
+// GetAllMetrics returns all metrics of types gauge and counter from the database.
+// It retries the retrieval operation up to 4 times with a backoff strategy in case of failure.
+//
+// Parameters:
+// - ctx: The context for the retrieval operation.
+//
+// Returns:
+// - A slice of slices containing gauge metrics.
+// - A slice of slices containing counter metrics.
+// - An error if the retrieval operation fails.
 func (s *Storage) GetAllMetrics(ctx context.Context) ([][]string, [][]string, error) {
 	const op = "storage.postgre.GetAllMetrics"
 	var gauges, counters [][]string
@@ -224,7 +274,17 @@ func (s *Storage) GetAllMetrics(ctx context.Context) ([][]string, [][]string, er
 	return gauges, counters, nil
 }
 
-// GetMetric Возвращает метрику по ключу
+// GetMetric returns a metric by key from the database.
+// It retries the retrieval operation up to 4 times with a backoff strategy in case of failure.
+//
+// Parameters:
+// - ctx: The context for the retrieval operation.
+// - typ: The type of the metric (gauge or counter).
+// - key: The name of the metric.
+//
+// Returns:
+// - The value of the metric as a string.
+// - An error if the retrieval operation fails or the metric is not found.
 func (s *Storage) GetMetric(ctx context.Context, typ string, key string) (string, error) {
 	const op = "storage.postgre.GetMetric"
 	var result string
@@ -270,7 +330,16 @@ func (s *Storage) GetMetric(ctx context.Context, typ string, key string) (string
 	return result, nil
 }
 
-// UpdateBatch saves the given Gauge and Counter metrics to the PG.
+// UpdateBatch saves the given Gauge and Counter metrics to the PostgreSQL database in a batch operation.
+// It retries the update operation up to 4 times with a backoff strategy in case of failure.
+//
+// Parameters:
+// - ctx: The context for the update operation.
+// - gauges: A slice of slices containing gauge metrics to be updated.
+// - counters: A slice of slices containing counter metrics to be updated.
+//
+// Returns:
+// - An error if the update operation fails.
 func (s *Storage) UpdateBatch(ctx context.Context, gauges [][]string, counters [][]string) error {
 	const op = "storage.postgre.UpdateBatch"
 

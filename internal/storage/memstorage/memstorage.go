@@ -1,3 +1,5 @@
+// Package memstorage provides an in-memory storage implementation for metrics.
+// It includes methods for creating, updating, and retrieving Gauge and Counter metrics.
 package memstorage
 
 import (
@@ -8,31 +10,44 @@ import (
 	"github.com/mbiwapa/metric/internal/storage"
 )
 
-// Storage Структура для хранения метрик
+// Storage is a structure for storing metrics.
+// It contains slices of Gauge and Counter metrics.
 type Storage struct {
-	Gauge   []Gauge
-	Counter []Counter
+	Gauge   []Gauge   // Slice of Gauge metrics
+	Counter []Counter // Slice of Counter metrics
 }
 
-// Gauge Структура для хранения определенного типа метрик
+// Gauge is a structure for storing a specific type of metric.
+// It contains the name and value of the gauge metric.
 type Gauge struct {
-	Name  string
-	Value float64
+	Name  string  // Name of the gauge metric
+	Value float64 // Value of the gauge metric
 }
 
-// Counter Структура для хранения определенного типа метрик
+// Counter is a structure for storing a specific type of metric.
+// It contains the name and value of the counter metric.
 type Counter struct {
-	Name  string
-	Value int64
+	Name  string // Name of the counter metric
+	Value int64  // Value of the counter metric
 }
 
-// New return a new Storage instance.
+// New creates and returns a new instance of Storage.
+// This function initializes a new Storage struct, which is used to store metrics in memory.
+// Returns:
+// - *Storage: a pointer to the newly created Storage instance.
+// - error: always returns nil as there are no error conditions in this function.
 func New() (*Storage, error) {
 	var storage Storage
 	return &storage, nil
 }
 
 // UpdateGauge saves the given Gauge metric to the memory.
+// Parameters:
+// - ctx: context for managing request-scoped values, cancelation, and deadlines.
+// - key: the name of the gauge metric.
+// - value: the value of the gauge metric.
+// Returns:
+// - error: if any error occurs during the update.
 func (s *Storage) UpdateGauge(_ context.Context, key string, value float64) error {
 
 	changed := false
@@ -54,6 +69,12 @@ func (s *Storage) UpdateGauge(_ context.Context, key string, value float64) erro
 }
 
 // UpdateCounter saves the given Counter metric to the memory.
+// Parameters:
+// - ctx: context for managing request-scoped values, cancelation, and deadlines.
+// - key: the name of the counter metric.
+// - value: the value of the counter metric.
+// Returns:
+// - error: if any error occurs during the update.
 func (s *Storage) UpdateCounter(_ context.Context, key string, value int64) error {
 	changed := false
 	for i := 0; i < len(s.Counter); i++ {
@@ -72,7 +93,13 @@ func (s *Storage) UpdateCounter(_ context.Context, key string, value int64) erro
 	return nil
 }
 
-// GetAllMetrics Возвращает слайс метрик 2 типов gauge и counter
+// GetAllMetrics returns slices of metrics of two types: gauge and counter.
+// Parameters:
+// - ctx: context for managing request-scoped values, cancelation, and deadlines.
+// Returns:
+// - [][]string: slice of gauge metrics, where each metric is represented as a slice of strings [name, value].
+// - [][]string: slice of counter metrics, where each metric is represented as a slice of strings [name, value].
+// - error: if any error occurs during the retrieval.
 func (s *Storage) GetAllMetrics(_ context.Context) ([][]string, [][]string, error) {
 	gauge := make([][]string, 0, 40)
 	for _, metric := range s.Gauge {
@@ -88,7 +115,14 @@ func (s *Storage) GetAllMetrics(_ context.Context) ([][]string, [][]string, erro
 	return gauge, counter, nil
 }
 
-// GetMetric Возвращает метрику по ключу
+// GetMetric returns a metric by key.
+// Parameters:
+// - ctx: context for managing request-scoped values, cancelation, and deadlines.
+// - typ: the type of the metric (gauge or counter).
+// - key: the name of the metric.
+// Returns:
+// - string: the value of the metric as a string.
+// - error: if the metric is not found or any other error occurs.
 func (s *Storage) GetMetric(_ context.Context, typ string, key string) (string, error) {
 	if typ == format.Gauge {
 		for _, metric := range s.Gauge {
@@ -109,6 +143,12 @@ func (s *Storage) GetMetric(_ context.Context, typ string, key string) (string, 
 }
 
 // UpdateBatch saves the given Gauge and Counter metrics to the memory.
+// Parameters:
+// - ctx: context for managing request-scoped values, cancelation, and deadlines.
+// - gauges: slice of gauge metrics, where each metric is represented as a slice of strings [name, value].
+// - counters: slice of counter metrics, where each metric is represented as a slice of strings [name, value].
+// Returns:
+// - error: if any error occurs during the update.
 func (s *Storage) UpdateBatch(_ context.Context, gauges [][]string, counters [][]string) error {
 	for _, gauge := range gauges {
 		changed := false

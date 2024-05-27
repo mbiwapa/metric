@@ -18,8 +18,23 @@ import (
 //
 //go:generate go run github.com/vektra/mockery/v2@v2.28.2 --name=Updater
 type Updater interface {
+	// UpdateGauge updates the gauge metric with the given key and value.
+	// ctx: context for the operation.
+	// key: the name of the gauge metric.
+	// value: the value to update the gauge metric with.
 	UpdateGauge(ctx context.Context, key string, value float64) error
+
+	// UpdateCounter updates the counter metric with the given key and value.
+	// ctx: context for the operation.
+	// key: the name of the counter metric.
+	// value: the value to update the counter metric with.
 	UpdateCounter(ctx context.Context, key string, value int64) error
+
+	// GetMetric retrieves the metric value for the given type and key.
+	// ctx: context for the operation.
+	// typ: the type of the metric (e.g., gauge, counter).
+	// key: the name of the metric.
+	// Returns the metric value as a string and an error if any.
 	GetMetric(ctx context.Context, typ string, key string) (string, error)
 }
 
@@ -27,12 +42,24 @@ type Updater interface {
 //
 //go:generate go run github.com/vektra/mockery/v2@v2.28.2 --name=Backuper
 type Backuper interface {
+	// SaveToStruct saves the metric data to a struct.
+	// typ: the type of the metric (e.g., gauge, counter).
+	// name: the name of the metric.
+	// value: the value of the metric.
 	SaveToStruct(typ string, name string, value string) error
+
+	// SaveToFile saves the metric data to a file.
 	SaveToFile()
+
+	// IsSyncMode checks if the backup is in sync mode.
+	// Returns true if the backup is in sync mode, false otherwise.
 	IsSyncMode() bool
 }
 
-// New returned func for update
+// New returns an HTTP handler function for updating metrics.
+// log: the logger instance for logging.
+// storage: the storage interface for updating metrics.
+// backup: the backup interface for saving metrics.
 func New(log *zap.Logger, storage Updater, backup Backuper) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {

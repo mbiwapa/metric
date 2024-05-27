@@ -1,3 +1,6 @@
+// Package main is the entry point of the application. It initializes the configuration, logger,
+// metrics sources, storage, and client. It also starts the collector and sender routines
+// and handles graceful shutdown on receiving termination signals.
 package main
 
 import (
@@ -19,16 +22,22 @@ import (
 	"github.com/mbiwapa/metric/internal/storage/memstorage"
 )
 
+// main is the entry point of the application. It initializes the configuration, logger,
+// metrics sources, storage, and client. It also starts the collector and sender routines
+// and handles graceful shutdown on receiving termination signals.
 func main() {
 
+	// Create a context that is canceled on receiving an interrupt or SIGTERM signal.
 	mainCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
+	// Load configuration.
 	conf, err := config.MustLoadConfig()
 	if err != nil {
 		panic("Logger initialization error: " + err.Error())
 	}
 
+	// Initialize logger.
 	logger, err := logger.New("info")
 	if err != nil {
 		panic("Logger initialization error: " + err.Error())
@@ -36,46 +45,54 @@ func main() {
 
 	logger.Info("Start service!")
 
+	// Initialize memory statistics source.
 	memSource, err := memstatssource.New()
 	if err != nil {
 		logger.Error("Metrics source unavailable!", zap.Error(err))
 		os.Exit(1)
 	}
 
+	// Initialize psutil source.
 	psutilSource, err := gopsutilsource.New()
 	if err != nil {
 		logger.Error("Metrics source unavailable!", zap.Error(err))
 		os.Exit(1)
 	}
 
+	// Initialize in-memory storage.
 	storage, err := memstorage.New()
 	if err != nil {
-		logger.Error("Stor unavailable!", zap.Error(err))
+		logger.Error("Storage unavailable!", zap.Error(err))
 		os.Exit(1)
 	}
 
+	// Initialize HTTP client.
 	client, err := client.New(conf.Addr, conf.Key, logger)
 	if err != nil {
-		logger.Error("Dont create http client", zap.Error(err))
+		logger.Error("Failed to create HTTP client", zap.Error(err))
 		os.Exit(1)
 	}
+
+	// Channel to capture errors from collector and sender.
 	errorChanel := make(chan error)
 
+	// Start the collector routine.
 	collector.Start(storage, conf.PollInterval, logger, errorChanel, memSource, psutilSource)
 
-	sender.Start(storage, client, conf.ReportInterval, logger, conf.WorkerCount, errorChanel)
+	// Start the sender routine.
+	sender.Start(mainCtx, storage, client, conf.ReportInterval, logger, conf.WorkerCount, errorChanel)
 
+	// Goroutine to log errors from the error channel.
 	go func() {
-		// Перехватываем ошибки у воркеров
 		for err = range errorChanel {
 			logger.Error("Error:", zap.Error(err))
 		}
 	}()
 
+	// Wait for termination signal.
 	<-mainCtx.Done()
 
-	// Если придёт сигнал остановки в контекст, ждем 3 секунды завершения всех горутин и прощаемся
+	// Wait for 3 seconds to allow all goroutines to finish and log shutdown message.
 	time.Sleep(3 * time.Second)
 	logger.Info("Good bye!")
-
 }

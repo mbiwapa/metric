@@ -19,6 +19,8 @@ import (
 //
 //go:generate go run github.com/vektra/mockery/v2@v2.28.2 --name=Updater
 type Updater interface {
+	// UpdateBatch updates a batch of gauge and counter metrics in the storage.
+	// It takes a context for cancellation, and slices of gauge and counter metrics.
 	UpdateBatch(ctx context.Context, gauges [][]string, counters [][]string) error
 }
 
@@ -26,12 +28,19 @@ type Updater interface {
 //
 //go:generate go run github.com/vektra/mockery/v2@v2.28.2 --name=Backuper
 type Backuper interface {
+	// SaveToStruct saves a metric to a backup structure.
+	// It takes the type, name, and value of the metric.
 	SaveToStruct(typ string, name string, value string) error
+
+	// SaveToFile saves the backup structure to a file.
 	SaveToFile()
+
+	// IsSyncMode checks if the backup is in synchronous mode.
 	IsSyncMode() bool
 }
 
-// NewJSON returned func for batch update
+// NewJSON returns an HTTP handler function for batch updating metrics.
+// It takes a logger, storage updater, backup handler, and an optional SHA256 key for response hashing.
 func NewJSON(log *zap.Logger, storage Updater, backup Backuper, sha256key string) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -101,6 +110,9 @@ func NewJSON(log *zap.Logger, storage Updater, backup Backuper, sha256key string
 	}
 }
 
+// backupHandler handles the backup of a single metric.
+// It takes a logger, backup handler, and the metric to be backed up.
+// Returns an error if the metric type is undefined or if the backup fails.
 func backupHandler(log *zap.Logger, backup Backuper, metric format.Metric) error {
 	const op = "handlers.updates.backup"
 	if backup.IsSyncMode() {
