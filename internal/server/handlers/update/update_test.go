@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/middleware"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 
 	"github.com/mbiwapa/metric/internal/logger"
 	"github.com/mbiwapa/metric/internal/server/handlers/update/mocks"
@@ -158,4 +159,28 @@ func TestNew(t *testing.T) {
 			require.Equal(t, resp.StatusCode, tt.wantStatus)
 		})
 	}
+}
+func ExampleNew() {
+	log, _ := zap.NewProduction()
+	defer log.Sync()
+
+	mockUpdater := &mocks.Updater{}
+	mockBackuper := &mocks.Backuper{}
+
+	// Set up the mock expectation for UpdateGauge
+	mockUpdater.On("UpdateGauge", mock.Anything, "test1", 0.5653).Return(nil)
+	// Set up the mock expectation for IsSyncMode
+	mockBackuper.On("IsSyncMode").Return(false)
+
+	r := chi.NewRouter()
+	r.Post("/update/{type}/{name}/{value}", New(log, mockUpdater, mockBackuper))
+
+	req, _ := http.NewRequest(http.MethodPost, "/update/gauge/test1/0.5653", nil)
+	rr := httptest.NewRecorder()
+
+	r.ServeHTTP(rr, req)
+	fmt.Println(rr.Code)
+
+	// Output:
+	// 200
 }

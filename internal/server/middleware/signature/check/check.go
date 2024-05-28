@@ -5,11 +5,21 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/mbiwapa/metric/internal/lib/signature"
 	"go.uber.org/zap"
+
+	"github.com/mbiwapa/metric/internal/lib/signature"
 )
 
-// New function check signature of request
+// New creates a middleware function that checks the signature of incoming HTTP requests.
+// It verifies that the SHA256 hash of the request body matches the expected hash derived from a secret key.
+// If the hashes do not match, it responds with a 400 Bad Request status code.
+//
+// Parameters:
+// - key: A secret key used to generate the expected hash of the request body.
+// - log: A zap.Logger instance for logging information and errors.
+//
+// Returns:
+// - A middleware function that can be used with an HTTP handler to check request signatures.
 func New(key string, log *zap.Logger) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		log = log.With(
@@ -28,6 +38,7 @@ func New(key string, log *zap.Logger) func(next http.Handler) http.Handler {
 					w.WriteHeader(http.StatusInternalServerError)
 					return
 				}
+				// Restore the request body for further processing
 				r.Body = io.NopCloser(bytes.NewBuffer(body))
 
 				hashStr := signature.GetHash(key, string(body), log)

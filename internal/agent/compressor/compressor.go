@@ -1,3 +1,5 @@
+// Package compressor provides a compressor that compresses data using the gzip algorithm.
+// It also provides a function to create a new Compressor instance and a function to get a compressed reader for the given data.
 package compressor
 
 import (
@@ -14,6 +16,8 @@ type Compressor struct {
 }
 
 // New creates a new Compressor instance
+// log: A zap.Logger instance used for logging errors and information.
+// Returns a pointer to a new Compressor instance.
 func New(log *zap.Logger) *Compressor {
 	return &Compressor{
 		Logger: log,
@@ -21,6 +25,8 @@ func New(log *zap.Logger) *Compressor {
 }
 
 // GetCompressedData returns a compressed reader for the given data.
+// data: A byte slice containing the data to be compressed.
+// Returns an io.Reader containing the compressed data and an error if any occurred during compression.
 func (compressor Compressor) GetCompressedData(data []byte) (io.Reader, error) {
 	b := new(bytes.Buffer)
 	w, err := gzip.NewWriterLevel(b, gzip.BestSpeed)

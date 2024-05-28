@@ -6,18 +6,39 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/middleware"
-	"github.com/mbiwapa/metric/internal/lib/signature"
 	"go.uber.org/zap"
+
+	"github.com/mbiwapa/metric/internal/lib/signature"
 )
 
-// AllMetricGeter interface for Metric repo
+// AllMetricGeter defines the methods required to retrieve all metrics from the storage.
+// It is used to abstract the data retrieval logic, allowing for different implementations.
 //
 //go:generate go run github.com/vektra/mockery/v2@v2.28.2 --name=AllMetricGeter
 type AllMetricGeter interface {
+	// GetAllMetrics retrieves all gauge and counter metrics from the storage.
+	//
+	// Parameters:
+	//   - ctx: A context.Context instance for managing request-scoped values, cancellation, and deadlines.
+	//
+	// Returns:
+	//   - [][]string: A slice of slices containing gauge metrics, where each inner slice represents a metric with its name and value.
+	//   - [][]string: A slice of slices containing counter metrics, where each inner slice represents a metric with its name and value.
+	//   - error: An error object if there is an issue retrieving the metrics, otherwise nil.
 	GetAllMetrics(ctx context.Context) ([][]string, [][]string, error)
 }
 
-// New возвращает обработчик возвращающий HTML страницу со всеми доступными
+// New returns an HTTP handler function that serves an HTML page with all available metrics.
+// It logs the request, retrieves metrics from the storage, and constructs an HTML response.
+// If a SHA256 key is provided, it also includes a hash of the response body in the headers.
+//
+// Parameters:
+//   - log: A zap.Logger instance for logging.
+//   - storage: An implementation of the AllMetricGeter interface to retrieve metrics.
+//   - sha256key: A string key used to generate a SHA256 hash of the response body.
+//
+// Returns:
+//   - An http.HandlerFunc that handles HTTP requests and serves the metrics page.
 func New(log *zap.Logger, storage AllMetricGeter, sha256key string) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {

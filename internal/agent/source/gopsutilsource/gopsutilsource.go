@@ -1,3 +1,5 @@
+// Package gopsutilsource provides a source that retrieves metrics using the gopsutil library.
+// It provides functions to retrieve the value of a metric by key and to retrieve a list of observable metrics.
 package gopsutilsource
 
 import (
@@ -9,17 +11,20 @@ import (
 	"github.com/shirou/gopsutil/mem"
 )
 
-// MetricsRepo структура обертка пакета рантайм для имплементации интерфейсов агента
+// MetricsRepo is a wrapper structure for the runtime package to implement agent interfaces.
 type MetricsRepo struct {
 }
 
-// New возвращает инстанс источника
+// New returns an instance of the source.
+// It initializes and returns a new MetricsRepo instance.
 func New() (*MetricsRepo, error) {
 	var storage MetricsRepo
 	return &storage, nil
 }
 
-// MetricGet возвращает значение метрики по ключу
+// MetricGet returns the value of a metric by key.
+// It takes the metric name and source type as parameters and returns the metric value as a float64 and an error if any.
+// Supported metrics are "TotalMemory", "FreeMemory", and CPU utilization metrics in the format "CPUutilizationN" where N is the CPU core number.
 func (s *MetricsRepo) MetricGet(metricName string, sourceType string) (float64, error) {
 
 	switch metricName {
@@ -56,7 +61,9 @@ func (s *MetricsRepo) MetricGet(metricName string, sourceType string) (float64, 
 	return 0, fmt.Errorf("undefined metric: %s", metricName)
 }
 
-// GetObservableMetrics возвращает список метрик для отслеживание агентом
+// GetObservableMetrics returns a list of metrics to be monitored by the agent.
+// It returns a map where the keys are metric names and the values are their source types (e.g., "memory" or "cpu").
+// The function also handles errors that may occur while fetching the number of CPU cores.
 func (s *MetricsRepo) GetObservableMetrics() (map[string]string, error) {
 
 	observableMetrics := map[string]string{
