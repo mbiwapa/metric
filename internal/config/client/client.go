@@ -1,3 +1,5 @@
+// Package config provides functionality for loading server configurations
+// from command-line flags and environment variables.
 package config
 
 import (

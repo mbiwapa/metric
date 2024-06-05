@@ -1,3 +1,4 @@
+// Package check provides middleware for verifying the signature of incoming HTTP requests.
 package check
 
 import (

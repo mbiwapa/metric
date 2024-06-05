@@ -1,3 +1,4 @@
+// Package update provides HTTP handlers for updating individual metrics.
 package update
 
 import (

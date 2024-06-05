@@ -1,3 +1,4 @@
+// Package home provides HTTP handlers for serving an HTML page with all available metrics.
 package home
 
 import (

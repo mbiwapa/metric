@@ -1,3 +1,4 @@
+// Package logger provides middleware for logging HTTP requests and responses using zap.Logger.
 package logger
 
 import (

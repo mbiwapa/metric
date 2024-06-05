@@ -1,3 +1,4 @@
+// Package updates provides HTTP handlers for batch updating metrics and handling backups.
 package updates
 
 import (

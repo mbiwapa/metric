@@ -1,3 +1,5 @@
+// Package decompressor provides middleware for decompressing HTTP request bodies
+// that are compressed using gzip.
 package decompressor
 
 import (

@@ -1,3 +1,4 @@
+// Package ping provides HTTP handlers for checking the availability of a database or service.
 package ping
 
 import (

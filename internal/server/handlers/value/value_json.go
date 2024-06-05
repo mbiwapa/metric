@@ -1,3 +1,4 @@
+// Package value provides HTTP handlers for processing metric requests and responding with metric data.
 package value
 
 import (
