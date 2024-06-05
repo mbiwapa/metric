@@ -52,7 +52,6 @@ func main() {
 	storage, err := memstorage.New()
 	if err != nil {
 		logger.Error("Can't create storage", zap.Error(err))
-		os.Exit(1)
 	}
 
 	// Initialize PostgreSQL storage if DatabaseDSN is provided.
@@ -61,7 +60,6 @@ func main() {
 		pgstorage, err = postgre.New(config.DatabaseDSN)
 		if err != nil {
 			logger.Error("Can't create postgree storage", zap.Error(err))
-			os.Exit(1)
 		}
 		defer pgstorage.Close()
 	}
@@ -83,7 +81,6 @@ func main() {
 	}
 	if err != nil {
 		logger.Error("Can't create saver", zap.Error(err))
-		os.Exit(1)
 	}
 	defer backup.SaveToFile()
 	if config.Restore {
@@ -133,7 +130,6 @@ func main() {
 		err = srv.ListenAndServe()
 		if err != nil {
 			logger.Error("The server did not start!", zap.Error(err))
-			os.Exit(1)
 		}
 	}()
 

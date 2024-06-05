@@ -92,15 +92,15 @@ func (c *Client) Send(gauges [][]string, counters [][]string) error {
 		})
 	}
 
-	data, err := json.Marshal(body)
-	if err != nil {
-		logger.Error("Cant encoding request", zap.Error(err))
-		return err
+	data, errJSON := json.Marshal(body)
+	if errJSON != nil {
+		logger.Error("Cant encoding request", zap.Error(errJSON))
+		return errJSON
 	}
-	compressedData, err := c.Compressor.GetCompressedData(data)
-	if err != nil {
-		logger.Error("Cant initializing compressed reader", zap.Error(err))
-		return err
+	compressedData, errCompress := c.Compressor.GetCompressedData(data)
+	if errCompress != nil {
+		logger.Error("Cant initializing compressed reader", zap.Error(errCompress))
+		return errCompress
 	}
 
 	action := func(attempt uint) error {
@@ -137,7 +137,7 @@ func (c *Client) Send(gauges [][]string, counters [][]string) error {
 		return nil
 	}
 
-	err = retry.Retry(
+	err := retry.Retry(
 		action,
 		strategy.Limit(4),
 		strategy.Backoff(backoff.Backoff()))

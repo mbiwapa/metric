@@ -2,7 +2,11 @@ module github.com/mbiwapa/metric
 
 go 1.21.4
 
-require github.com/stretchr/testify v1.8.4
+require (
+	github.com/stretchr/testify v1.8.4
+	golang.org/x/tools v0.12.1-0.20230825192346-2191a27a6dc5
+	honnef.co/go/tools v0.4.7
+)
 
 require (
 	github.com/go-ole/go-ole v1.2.6 // indirect
@@ -15,7 +19,9 @@ require (
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
 	golang.org/x/crypto v0.9.0 // indirect
-	golang.org/x/sync v0.1.0 // indirect
+	golang.org/x/exp/typeparams v0.0.0-20221208152030-732eee02a75a // indirect
+	golang.org/x/mod v0.12.0 // indirect
+	golang.org/x/sync v0.3.0 // indirect
 	golang.org/x/sys v0.15.0 // indirect
 	golang.org/x/text v0.9.0 // indirect
 )

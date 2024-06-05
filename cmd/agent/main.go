@@ -49,28 +49,24 @@ func main() {
 	memSource, err := memstatssource.New()
 	if err != nil {
 		logger.Error("Metrics source unavailable!", zap.Error(err))
-		os.Exit(1)
 	}
 
 	// Initialize psutil source.
 	psutilSource, err := gopsutilsource.New()
 	if err != nil {
 		logger.Error("Metrics source unavailable!", zap.Error(err))
-		os.Exit(1)
 	}
 
 	// Initialize in-memory storage.
 	storage, err := memstorage.New()
 	if err != nil {
 		logger.Error("Storage unavailable!", zap.Error(err))
-		os.Exit(1)
 	}
 
 	// Initialize HTTP client.
 	client, err := client.New(conf.Addr, conf.Key, logger)
 	if err != nil {
 		logger.Error("Failed to create HTTP client", zap.Error(err))
-		os.Exit(1)
 	}
 
 	// Channel to capture errors from collector and sender.

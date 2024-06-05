@@ -64,8 +64,8 @@ func NewJSON(log *zap.Logger, storage MetricGeter, sha256key string) http.Handle
 		defer cancel()
 
 		// Retrieve the metric value from storage
-		value, err := storage.GetMetric(databaseCtx, metricRequest.MType, metricRequest.ID)
-		if errors.Is(err, storageErrors.ErrMetricNotFound) {
+		value, errStor := storage.GetMetric(databaseCtx, metricRequest.MType, metricRequest.ID)
+		if errors.Is(errStor, storageErrors.ErrMetricNotFound) {
 			log.Info(
 				"Metric is not found",
 				zap.String("name", metricRequest.ID),
@@ -73,8 +73,8 @@ func NewJSON(log *zap.Logger, storage MetricGeter, sha256key string) http.Handle
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
-		if err != nil && !errors.Is(err, storageErrors.ErrMetricNotFound) {
-			log.Error("Failed to get metric", zap.Error(err))
+		if errStor != nil && !errors.Is(errStor, storageErrors.ErrMetricNotFound) {
+			log.Error("Failed to get metric", zap.Error(errStor))
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}

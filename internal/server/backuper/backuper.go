@@ -78,14 +78,14 @@ type Buckuper struct {
 // - a pointer to a new Buckuper instance
 // - an error if any occurs during the creation of the Buckuper instance
 func New(storage AllMetricGeter, storeInterval int64, storagePath string, logger *zap.Logger) (*Buckuper, error) {
-	var metrics metrics
+	initialMetrics := metrics{}
 
 	return &Buckuper{
 		logger:        logger,
 		storage:       storage,
 		storeInterval: storeInterval,
 		storagePath:   storagePath,
-		metrics:       metrics,
+		metrics:       initialMetrics,
 	}, nil
 }
 

@@ -179,9 +179,9 @@ func (s *Storage) UpdateCounter(ctx context.Context, key string, value int64) er
 		}
 
 		if originalValue != "" {
-			val, err := strconv.ParseInt(originalValue, 0, 64)
-			if err != nil {
-				return fmt.Errorf("%s: %w", op, err)
+			val, errStr := strconv.ParseInt(originalValue, 0, 64)
+			if errStr != nil {
+				return fmt.Errorf("%s: %w", op, errStr)
 			}
 			value = value + val
 		}
@@ -345,15 +345,15 @@ func (s *Storage) UpdateBatch(ctx context.Context, gauges [][]string, counters [
 
 	action := func(attempt uint) error {
 
-		tx, err := s.db.BeginTx(ctx, &sql.TxOptions{})
-		if err != nil {
-			return fmt.Errorf("%s: %w", op, err)
+		tx, errTx := s.db.BeginTx(ctx, &sql.TxOptions{})
+		if errTx != nil {
+			return fmt.Errorf("%s: %w", op, errTx)
 		}
 		defer tx.Rollback()
 
-		stmt, err := tx.PrepareContext(ctx, `INSERT INTO metric (name, gauge, counter) VALUES ($1,$2,$3) ON CONFLICT (name) DO UPDATE SET gauge=$2, counter=$3`)
-		if err != nil {
-			return fmt.Errorf("%s: %w", op, err)
+		stmt, errTx := tx.PrepareContext(ctx, `INSERT INTO metric (name, gauge, counter) VALUES ($1,$2,$3) ON CONFLICT (name) DO UPDATE SET gauge=$2, counter=$3`)
+		if errTx != nil {
+			return fmt.Errorf("%s: %w", op, errTx)
 		}
 		for _, gauge := range gauges {
 			newVal, err := strconv.ParseFloat(gauge[1], 64)
@@ -390,9 +390,9 @@ func (s *Storage) UpdateBatch(ctx context.Context, gauges [][]string, counters [
 			}
 		}
 
-		err = tx.Commit()
-		if err != nil {
-			return fmt.Errorf("%s: %w", op, err)
+		errTx = tx.Commit()
+		if errTx != nil {
+			return fmt.Errorf("%s: %w", op, errTx)
 		}
 
 		return nil
