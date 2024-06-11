@@ -1,6 +1,10 @@
 // Package main is the entry point of the application. It initializes the configuration, logger,
 // metrics sources, storage, and client. It also starts the collector and sender routines
 // and handles graceful shutdown on receiving termination signals.
+
+// buildVersion, buildDate, and buildCommit are used to store the build version, build date, and build commit
+// information, respectively. These variables are set during the build process and can be used to
+// identify the specific build of the application.
 package main
 
 import (
@@ -22,10 +26,26 @@ import (
 	"github.com/mbiwapa/metric/internal/storage/memstorage"
 )
 
+var buildVersion string
+var buildDate string
+var buildCommit string
+
 // main is the entry point of the application. It initializes the configuration, logger,
 // metrics sources, storage, and client. It also starts the collector and sender routines
 // and handles graceful shutdown on receiving termination signals.
 func main() {
+	if buildVersion == "" {
+		buildVersion = "N/A"
+	}
+	if buildDate == "" {
+		buildDate = "N/A"
+	}
+	if buildCommit == "" {
+		buildCommit = "N/A"
+	}
+	println("Build version:", buildVersion)
+	println("Build date:", buildDate)
+	println("Build commit:", buildCommit)
 
 	// Create a context that is canceled on receiving an interrupt or SIGTERM signal.
 	mainCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -49,28 +69,24 @@ func main() {
 	memSource, err := memstatssource.New()
 	if err != nil {
 		logger.Error("Metrics source unavailable!", zap.Error(err))
-		os.Exit(1)
 	}
 
 	// Initialize psutil source.
 	psutilSource, err := gopsutilsource.New()
 	if err != nil {
 		logger.Error("Metrics source unavailable!", zap.Error(err))
-		os.Exit(1)
 	}
 
 	// Initialize in-memory storage.
 	storage, err := memstorage.New()
 	if err != nil {
 		logger.Error("Storage unavailable!", zap.Error(err))
-		os.Exit(1)
 	}
 
 	// Initialize HTTP client.
 	client, err := client.New(conf.Addr, conf.Key, logger)
 	if err != nil {
 		logger.Error("Failed to create HTTP client", zap.Error(err))
-		os.Exit(1)
 	}
 
 	// Channel to capture errors from collector and sender.

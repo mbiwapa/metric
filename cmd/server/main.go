@@ -1,5 +1,9 @@
 // Package main is the entry point of the application. It initializes the configuration, logger, storage, and backup mechanisms.
 // It also sets up the HTTP server with appropriate routes and middleware, and handles graceful shutdown on receiving termination signals.
+
+// buildVersion, buildDate, and buildCommit are used to store the build version, build date, and build commit
+// information, respectively. These variables are set during the build process and can be used to
+// identify the specific build of the application.
 package main
 
 import (
@@ -29,9 +33,25 @@ import (
 	"github.com/mbiwapa/metric/internal/storage/postgre"
 )
 
+var buildVersion string
+var buildDate string
+var buildCommit string
+
 // main is the entry point of the application. It initializes the configuration, logger, storage, and backup mechanisms.
 // It also sets up the HTTP server with appropriate routes and middleware, and handles graceful shutdown on receiving termination signals.
 func main() {
+	if buildVersion == "" {
+		buildVersion = "N/A"
+	}
+	if buildDate == "" {
+		buildDate = "N/A"
+	}
+	if buildCommit == "" {
+		buildCommit = "N/A"
+	}
+	println("Build version:", buildVersion)
+	println("Build date:", buildDate)
+	println("Build commit:", buildCommit)
 
 	// Create a context that listens for the interrupt signal from the OS.
 	mainCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -52,7 +72,6 @@ func main() {
 	storage, err := memstorage.New()
 	if err != nil {
 		logger.Error("Can't create storage", zap.Error(err))
-		os.Exit(1)
 	}
 
 	// Initialize PostgreSQL storage if DatabaseDSN is provided.
@@ -61,7 +80,6 @@ func main() {
 		pgstorage, err = postgre.New(config.DatabaseDSN)
 		if err != nil {
 			logger.Error("Can't create postgree storage", zap.Error(err))
-			os.Exit(1)
 		}
 		defer pgstorage.Close()
 	}
@@ -83,7 +101,6 @@ func main() {
 	}
 	if err != nil {
 		logger.Error("Can't create saver", zap.Error(err))
-		os.Exit(1)
 	}
 	defer backup.SaveToFile()
 	if config.Restore {
@@ -133,7 +150,6 @@ func main() {
 		err = srv.ListenAndServe()
 		if err != nil {
 			logger.Error("The server did not start!", zap.Error(err))
-			os.Exit(1)
 		}
 	}()
 
