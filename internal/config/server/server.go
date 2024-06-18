@@ -10,12 +10,13 @@ import (
 
 // Config holds all the server configurations.
 type Config struct {
-	Addr          string // Server address and port
-	StoreInterval int64  // Interval in seconds to save current server metrics to disk
-	StoragePath   string // Full path to the file where current values are saved
-	Restore       bool   // Whether to load previously saved values from the specified file at server startup
-	DatabaseDSN   string // DSN string for connecting to the database
-	Key           string // Key for hash computation
+	Addr           string // Server address and port
+	StoreInterval  int64  // Interval in seconds to save current server metrics to disk
+	StoragePath    string // Full path to the file where current values are saved
+	Restore        bool   // Whether to load previously saved values from the specified file at server startup
+	DatabaseDSN    string // DSN string for connecting to the database
+	Key            string // Key for hash computation
+	PrivateKeyPath string // Path to the private key file
 }
 
 // MustLoadConfig loads the configuration from command-line flags and environment variables.
@@ -30,6 +31,7 @@ func MustLoadConfig() *Config {
 	flag.BoolVar(&config.Restore, "r", true, "Загружать или нет ранее сохранённые значения из указанного файла при старте сервера")
 	flag.StringVar(&config.DatabaseDSN, "d", "", "DSN строка для соединения с базой данных") //user=postgres password=postgres host=localhost port=5432 database=postgres sslmode=disable
 	flag.StringVar(&config.Key, "k", "", "Ключ для вычисления хеша")
+	flag.StringVar(&config.PrivateKeyPath, "crypto-key", "", "Путь к файлу с закрытым ключом")
 	flag.Parse()
 
 	// Override with environment variables if they are set
@@ -63,6 +65,15 @@ func MustLoadConfig() *Config {
 	envKey := os.Getenv("KEY")
 	if envKey != "" {
 		config.Key = envKey
+	}
+
+	envPrivateKeyPath := os.Getenv("CRYPTO_KEY")
+	if envPrivateKeyPath != "" {
+		config.PrivateKeyPath = envPrivateKeyPath
+	}
+
+	if _, err := os.Stat(config.PrivateKeyPath); os.IsNotExist(err) {
+		os.Exit(5)
 	}
 
 	return &config

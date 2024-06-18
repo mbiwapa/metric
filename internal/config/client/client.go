@@ -16,6 +16,7 @@ type Config struct {
 	PollInterval   int64  // Frequency of polling metrics from the source (in seconds)
 	Key            string // Key for hash computation
 	WorkerCount    int    // Number of threads for sending metrics
+	PublicKeyPath  string // Path to the public key file
 }
 
 // MustLoadConfig loads the configuration from command-line flags and environment variables.
@@ -31,6 +32,7 @@ func MustLoadConfig() (*Config, error) {
 	var Key string
 	var err error
 	var WorkerCount int
+	var PublicKeyPath string
 
 	// Define command-line flags
 	flag.StringVar(&Addr, "a", "localhost:8080", "Адрес  и порт сервера по сбору метрик")
@@ -38,6 +40,7 @@ func MustLoadConfig() (*Config, error) {
 	flag.Int64Var(&PollInterval, "p", 2, "Частота опроса метрик из источника (по умолчанию 2 секунды)")
 	flag.StringVar(&Key, "k", "", "Ключ для вычисления хеша")
 	flag.IntVar(&WorkerCount, "l", 1, "Количество потоков для отправки метрик (по умолчанию 1 поток)")
+	flag.StringVar(&PublicKeyPath, "crypto-key", "", "Путь к файлу с публичным ключом")
 	flag.Parse()
 
 	// Override with environment variables if they are set
@@ -46,6 +49,8 @@ func MustLoadConfig() (*Config, error) {
 	envReportInterval := os.Getenv("POLL_INTERVAL")
 	envWorkerCount := os.Getenv("RATE_LIMIT")
 	envKey := os.Getenv("KEY")
+	envPublicKeyPath := os.Getenv("CRYPTO_KEY")
+
 	if envAddr != "" {
 		Addr = envAddr
 	}
@@ -69,6 +74,12 @@ func MustLoadConfig() (*Config, error) {
 		if err != nil && envWorkerCount != "" {
 			return nil, fmt.Errorf("invalid env value: %s. %s", envWorkerCount, err)
 		}
+	}
+	if envPublicKeyPath != "" {
+		PublicKeyPath = envPublicKeyPath
+	}
+	if _, err = os.Stat(PublicKeyPath); os.IsNotExist(err) {
+		return nil, fmt.Errorf("file not found: %s. %s", PublicKeyPath, err)
 	}
 
 	// Create the configuration struct

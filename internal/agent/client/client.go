@@ -4,7 +4,9 @@
 package client
 
 import (
+	"bytes"
 	"encoding/json"
+	"io"
 	"net/http"
 	"strconv"
 
@@ -26,6 +28,11 @@ type Client struct {
 	Logger     *zap.Logger            // Logger is used for logging purposes.
 	Compressor *compressor.Compressor // Compressor is used to compress the data before sending.
 	Key        string                 // Key is used for generating SHA256 hashes for request validation.
+	Encoder    Encoder                // Encoder is used to encrypt the data before sending.
+}
+
+type Encoder interface {
+	EncryptData(data []byte) ([]byte, error)
 }
 
 // New initializes and returns a new instance of the Client struct.
@@ -39,7 +46,7 @@ type Client struct {
 // Returns:
 //   - *Client: A pointer to the newly created Client instance.
 //   - error: An error if there is an issue during the creation of the Client instance.
-func New(url string, key string, logger *zap.Logger) (*Client, error) {
+func New(url string, key string, logger *zap.Logger, encoder Encoder) (*Client, error) {
 	var client Client
 	client.URL = url
 	client.Client = &http.Client{
@@ -48,6 +55,7 @@ func New(url string, key string, logger *zap.Logger) (*Client, error) {
 	client.Logger = logger
 	client.Compressor = compressor.New(logger)
 	client.Key = key
+	client.Encoder = encoder
 
 	return &client, nil
 }
@@ -103,8 +111,22 @@ func (c *Client) Send(gauges [][]string, counters [][]string) error {
 		return errCompress
 	}
 
+	// Read the compressed data into a byte slice
+	compressedBytes, errBytes := io.ReadAll(compressedData)
+	if errBytes != nil {
+		logger.Error("Cant read compressed data", zap.Error(errBytes))
+		return errBytes
+	}
+
+	// Encrypt the compressed data
+	encryptedData, errEncrypt := c.Encoder.EncryptData(compressedBytes)
+	if errEncrypt != nil {
+		logger.Error("Cant encrypt data", zap.Error(errEncrypt))
+		return errEncrypt
+	}
+
 	action := func(attempt uint) error {
-		req, err := http.NewRequest("POST", c.URL+"/updates/", compressedData)
+		req, err := http.NewRequest("POST", c.URL+"/updates/", bytes.NewReader(encryptedData))
 		if err != nil {
 			logger.Error("Cant create request", zap.Error(err), zap.Uint("attempt", attempt))
 			return err

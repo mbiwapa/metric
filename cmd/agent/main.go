@@ -18,6 +18,7 @@ import (
 
 	"github.com/mbiwapa/metric/internal/agent/client"
 	"github.com/mbiwapa/metric/internal/agent/collector"
+	"github.com/mbiwapa/metric/internal/agent/encoder"
 	"github.com/mbiwapa/metric/internal/agent/sender"
 	"github.com/mbiwapa/metric/internal/agent/source/gopsutilsource"
 	"github.com/mbiwapa/metric/internal/agent/source/memstatssource"
@@ -83,8 +84,14 @@ func main() {
 		logger.Error("Storage unavailable!", zap.Error(err))
 	}
 
+	// Initialize encoder.
+	scrambler, errDecoder := encoder.New(conf.PublicKeyPath)
+	if errDecoder != nil {
+		logger.Error("Failed to create scrambler", zap.Error(errDecoder))
+	}
+
 	// Initialize HTTP client.
-	client, err := client.New(conf.Addr, conf.Key, logger)
+	client, err := client.New(conf.Addr, conf.Key, logger, scrambler)
 	if err != nil {
 		logger.Error("Failed to create HTTP client", zap.Error(err))
 	}
