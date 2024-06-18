@@ -1,3 +1,4 @@
+// Package decoder provides middleware for decrypting HTTP request bodies.
 package decoder
 
 import (
@@ -6,10 +7,19 @@ import (
 	"net/http"
 )
 
+// Decoder is an interface that defines a method for decrypting data.
 type Decoder interface {
+	// DecryptData takes encrypted data as input and returns the decrypted data or an error.
 	DecryptData(encryptedData []byte) ([]byte, error)
 }
 
+// New creates a new HTTP middleware that decrypts the request body using the provided Decoder.
+// It returns a function that takes an http.Handler and returns an http.Handler.
+//
+// The middleware reads the encrypted request body, decrypts it using the provided Decoder,
+// and replaces the request body with the decrypted data before passing the request to the next handler.
+//
+// If reading the request body or decrypting the data fails, it responds with an appropriate HTTP error.
 func New(decoder Decoder) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 
