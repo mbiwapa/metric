@@ -55,7 +55,7 @@ func main() {
 	// Load configuration.
 	conf, err := config.MustLoadConfig()
 	if err != nil {
-		panic("Logger initialization error: " + err.Error())
+		panic("Config load error: " + err.Error())
 	}
 
 	// Initialize logger.
