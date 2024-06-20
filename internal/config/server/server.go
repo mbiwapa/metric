@@ -101,7 +101,7 @@ func MustLoadConfig() *Config {
 				if config.StoragePath == "/tmp/metrics-db.json" && fileConfig.StoragePath != "" {
 					config.StoragePath = fileConfig.StoragePath
 				}
-				if config.Restore == true {
+				if config.Restore {
 					config.Restore = fileConfig.Restore
 				}
 				if config.DatabaseDSN == "" {
