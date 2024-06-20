@@ -27,6 +27,7 @@ func TestMustLoadConfig_JSONFile(t *testing.T) {
 	tmpFile.Close()
 
 	err = os.Setenv("CONFIG", tmpFile.Name())
+	require.NoError(t, err)
 
 	// Load the config
 	config := config.MustLoadConfig()
@@ -57,6 +58,7 @@ func TestMustLoadConfig_JSONFile_OverrideEnv(t *testing.T) {
 	tmpFile.Close()
 
 	err = os.Setenv("CONFIG", tmpFile.Name())
+	require.NoError(t, err)
 
 	// Override some environment variables
 	os.Setenv("ADDRESS", "localhost:8082")
@@ -102,6 +104,7 @@ func TestMustLoadConfig_JSONFile_InvalidJSON(t *testing.T) {
 	tmpFile.Close()
 
 	err = os.Setenv("CONFIG", tmpFile.Name())
+	require.NoError(t, err)
 
 	// Load the config
 	config := config.MustLoadConfig()
