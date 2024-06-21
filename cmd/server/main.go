@@ -8,6 +8,7 @@ package main
 
 import (
 	"context"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -17,6 +18,7 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
 
 	config "github.com/mbiwapa/metric/internal/config/server"
 	"github.com/mbiwapa/metric/internal/logger"
@@ -152,12 +154,24 @@ func main() {
 	srv := &http.Server{
 		Addr:    conf.Addr,
 		Handler: router,
+		BaseContext: func(_ net.Listener) context.Context {
+			return mainCtx
+		},
 	}
 
 	go func() {
-		err = srv.ListenAndServe()
-		if err != nil {
-			logger.Error("The server did not start!", zap.Error(err))
+		g, gCtx := errgroup.WithContext(mainCtx)
+		g.Go(func() error {
+			logger.Info("Starting server: ", zap.String("Addr", srv.Addr))
+			return srv.ListenAndServe()
+		})
+		g.Go(func() error {
+			<-gCtx.Done()
+			logger.Info("Shutdown server!")
+			return srv.Shutdown(context.Background())
+		})
+		if err := g.Wait(); err != nil {
+			logger.Info("Exit reason: ", zap.Error(err))
 		}
 	}()
 

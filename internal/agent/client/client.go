@@ -5,6 +5,7 @@ package client
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -29,6 +30,7 @@ type Client struct {
 	Compressor *compressor.Compressor // Compressor is used to compress the data before sending.
 	Key        string                 // Key is used for generating SHA256 hashes for request validation.
 	Encoder    Encoder                // Encoder is used to encrypt the data before sending.
+	context    context.Context        // context is the context for the client.
 }
 
 type Encoder interface {
@@ -46,7 +48,7 @@ type Encoder interface {
 // Returns:
 //   - *Client: A pointer to the newly created Client instance.
 //   - error: An error if there is an issue during the creation of the Client instance.
-func New(url string, key string, logger *zap.Logger, encoder Encoder) (*Client, error) {
+func New(ctx context.Context, url string, key string, logger *zap.Logger, encoder Encoder) (*Client, error) {
 	var client Client
 	client.URL = url
 	client.Client = &http.Client{
@@ -56,6 +58,7 @@ func New(url string, key string, logger *zap.Logger, encoder Encoder) (*Client, 
 	client.Compressor = compressor.New(logger)
 	client.Key = key
 	client.Encoder = encoder
+	client.context = ctx
 
 	return &client, nil
 }
@@ -178,9 +181,15 @@ func (c *Client) Send(gauges [][]string, counters [][]string) error {
 //   - errorChanel: A channel to send errors if there is an issue during the processing or sending of the metrics.
 func (c *Client) Worker(jobs <-chan map[string][][]string, errorChanel chan<- error) {
 	for j := range jobs {
-		err := c.Send(j["gauge"], j["counter"])
-		if err != nil {
-			errorChanel <- err
+		select {
+		// Завершаем работу если контекст закрылся
+		case <-c.context.Done():
+			return
+		default:
+			err := c.Send(j["gauge"], j["counter"])
+			if err != nil {
+				errorChanel <- err
+			}
 		}
 	}
 }

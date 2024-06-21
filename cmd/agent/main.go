@@ -91,7 +91,7 @@ func main() {
 	}
 
 	// Initialize HTTP client.
-	client, err := client.New(conf.Addr, conf.Key, logger, scrambler)
+	client, err := client.New(mainCtx, conf.Addr, conf.Key, logger, scrambler)
 	if err != nil {
 		logger.Error("Failed to create HTTP client", zap.Error(err))
 	}
@@ -100,7 +100,7 @@ func main() {
 	errorChanel := make(chan error)
 
 	// Start the collector routine.
-	collector.Start(storage, conf.PollInterval, logger, errorChanel, memSource, psutilSource)
+	collector.Start(mainCtx, storage, conf.PollInterval, logger, errorChanel, memSource, psutilSource)
 
 	// Start the sender routine.
 	sender.Start(mainCtx, storage, client, conf.ReportInterval, logger, conf.WorkerCount, errorChanel)
