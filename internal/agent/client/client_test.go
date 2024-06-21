@@ -1,6 +1,7 @@
 package client
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -54,7 +55,7 @@ func TestClient_Send(t *testing.T) {
 				panic("Encoder initialization error: " + errEncoder.Error())
 			}
 
-			c, err := New(srv.URL, "", logger, encoder)
+			c, err := New(context.Background(), srv.URL, "", logger, encoder)
 
 			require.NoError(t, err)
 
