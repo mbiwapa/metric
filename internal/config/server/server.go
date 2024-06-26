@@ -17,7 +17,8 @@ type Config struct {
 	Restore        bool   `json:"restore,omitempty"`        // Restore Whether to load previously saved values from the specified file at server startup
 	DatabaseDSN    string `json:"database_dsn,omitempty"`   // DatabaseDSN DSN string for connecting to the database
 	Key            string // Key for hash computation
-	PrivateKeyPath string `json:"crypto_key,omitempty"` // PrivateKeyPath to the private key file
+	PrivateKeyPath string `json:"crypto_key,omitempty"`     // PrivateKeyPath to the private key file
+	TrustedSubnet  string `json:"trusted_subnet,omitempty"` // TrustedSubnet CIDR for trusted subnet
 }
 
 // MustLoadConfig loads the configuration from command-line flags, environment variables, and a JSON file.
@@ -34,6 +35,7 @@ func MustLoadConfig() *Config {
 	flag.StringVar(&config.DatabaseDSN, "d", "", "DSN строка для соединения с базой данных")
 	flag.StringVar(&config.Key, "k", "", "Ключ для вычисления хеша")
 	flag.StringVar(&config.PrivateKeyPath, "crypto-key", "", "Путь к файлу с закрытым ключом")
+	flag.StringVar(&config.TrustedSubnet, "t", "", "CIDR для доверенной подсети")
 	flag.StringVar(&configFilePath, "c", "", "Путь к файлу конфигурации")
 	flag.StringVar(&configFilePath, "config", "", "Путь к файлу конфигурации")
 	flag.Parse()
@@ -76,6 +78,11 @@ func MustLoadConfig() *Config {
 		config.PrivateKeyPath = envPrivateKeyPath
 	}
 
+	envTrustedSubnet := os.Getenv("TRUSTED_SUBNET")
+	if envTrustedSubnet != "" {
+		config.TrustedSubnet = envTrustedSubnet
+	}
+
 	if _, err := os.Stat(config.PrivateKeyPath); os.IsNotExist(err) && config.PrivateKeyPath != "" {
 		os.Exit(5)
 	}
@@ -109,6 +116,9 @@ func MustLoadConfig() *Config {
 				}
 				if config.PrivateKeyPath == "" {
 					config.PrivateKeyPath = fileConfig.PrivateKeyPath
+				}
+				if config.TrustedSubnet == "" {
+					config.TrustedSubnet = fileConfig.TrustedSubnet
 				}
 			}
 			_ = file.Close()
