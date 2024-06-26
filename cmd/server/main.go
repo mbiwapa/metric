@@ -32,6 +32,7 @@ import (
 	mwDecoder "github.com/mbiwapa/metric/internal/server/middleware/decoder"
 	"github.com/mbiwapa/metric/internal/server/middleware/decompressor"
 	mwLogger "github.com/mbiwapa/metric/internal/server/middleware/logger"
+	"github.com/mbiwapa/metric/internal/server/middleware/security"
 	signatureCheck "github.com/mbiwapa/metric/internal/server/middleware/signature/check"
 	"github.com/mbiwapa/metric/internal/storage/memstorage"
 	"github.com/mbiwapa/metric/internal/storage/postgre"
@@ -122,6 +123,7 @@ func main() {
 	// Set up the HTTP router and middleware.
 	router := chi.NewRouter()
 	router.Use(
+		security.New(conf.TrustedSubnet),
 		middleware.RequestID,
 		mwLogger.New(logger),
 		middleware.URLFormat,
