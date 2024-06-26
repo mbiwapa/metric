@@ -8,6 +8,7 @@ package main
 
 import (
 	"context"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -17,15 +18,18 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
 
 	config "github.com/mbiwapa/metric/internal/config/server"
 	"github.com/mbiwapa/metric/internal/logger"
 	"github.com/mbiwapa/metric/internal/server/backuper"
+	"github.com/mbiwapa/metric/internal/server/decoder"
 	"github.com/mbiwapa/metric/internal/server/handlers/home"
 	"github.com/mbiwapa/metric/internal/server/handlers/ping"
 	"github.com/mbiwapa/metric/internal/server/handlers/update"
 	"github.com/mbiwapa/metric/internal/server/handlers/updates"
 	"github.com/mbiwapa/metric/internal/server/handlers/value"
+	mwDecoder "github.com/mbiwapa/metric/internal/server/middleware/decoder"
 	"github.com/mbiwapa/metric/internal/server/middleware/decompressor"
 	mwLogger "github.com/mbiwapa/metric/internal/server/middleware/logger"
 	signatureCheck "github.com/mbiwapa/metric/internal/server/middleware/signature/check"
@@ -58,7 +62,7 @@ func main() {
 	defer stop()
 
 	// Load configuration settings.
-	config := config.MustLoadConfig()
+	conf := config.MustLoadConfig()
 
 	// Initialize the logger.
 	logger, err := logger.New("info")
@@ -68,6 +72,11 @@ func main() {
 
 	logger.Info("Start service!")
 
+	decoder, err := decoder.New(conf.PrivateKeyPath)
+	if err != nil {
+		logger.Error("Can't create decoder", zap.Error(err))
+	}
+
 	// Initialize in-memory storage.
 	storage, err := memstorage.New()
 	if err != nil {
@@ -76,8 +85,8 @@ func main() {
 
 	// Initialize PostgreSQL storage if DatabaseDSN is provided.
 	var pgstorage *postgre.Storage
-	if config.DatabaseDSN != "" {
-		pgstorage, err = postgre.New(config.DatabaseDSN)
+	if conf.DatabaseDSN != "" {
+		pgstorage, err = postgre.New(conf.DatabaseDSN)
 		if err != nil {
 			logger.Error("Can't create postgree storage", zap.Error(err))
 		}
@@ -86,27 +95,27 @@ func main() {
 
 	// Initialize the backup mechanism.
 	var backup *backuper.Buckuper
-	if config.DatabaseDSN == "" {
+	if conf.DatabaseDSN == "" {
 		backup, err = backuper.New(
 			storage,
-			config.StoreInterval,
-			config.StoragePath,
+			conf.StoreInterval,
+			conf.StoragePath,
 			logger)
 	} else {
 		backup, err = backuper.New(
 			pgstorage,
-			config.StoreInterval,
-			config.StoragePath,
+			conf.StoreInterval,
+			conf.StoragePath,
 			logger)
 	}
 	if err != nil {
 		logger.Error("Can't create saver", zap.Error(err))
 	}
 	defer backup.SaveToFile()
-	if config.Restore {
+	if conf.Restore {
 		backup.Restore()
 	}
-	if config.StoreInterval > 0 {
+	if conf.StoreInterval > 0 {
 		go backup.Start()
 	}
 
@@ -118,38 +127,51 @@ func main() {
 		middleware.URLFormat,
 		middleware.Compress(5, "application/json", "text/html"),
 		decompressor.New(logger),
-		signatureCheck.New(config.Key, logger),
+		signatureCheck.New(conf.Key, logger),
+		mwDecoder.New(decoder),
 	)
 	router.Post("/", undefinedType)
 
 	// Set up routes based on the storage type.
-	if config.DatabaseDSN == "" {
+	if conf.DatabaseDSN == "" {
 		router.Post("/update/{type}/{name}/{value}", update.New(logger, storage, backup))
-		router.Post("/update/", update.NewJSON(logger, storage, backup, config.Key))
-		router.Get("/value/{type}/{name}", value.New(logger, storage, config.Key))
-		router.Post("/value/", value.NewJSON(logger, storage, config.Key))
-		router.Get("/", home.New(logger, storage, config.Key))
-		router.Post("/updates/", updates.NewJSON(logger, storage, backup, config.Key))
+		router.Post("/update/", update.NewJSON(logger, storage, backup, conf.Key))
+		router.Get("/value/{type}/{name}", value.New(logger, storage, conf.Key))
+		router.Post("/value/", value.NewJSON(logger, storage, conf.Key))
+		router.Get("/", home.New(logger, storage, conf.Key))
+		router.Post("/updates/", updates.NewJSON(logger, storage, backup, conf.Key))
 	} else {
 		router.Post("/{type}/{name}/{value}", update.New(logger, pgstorage, backup))
-		router.Post("/update/", update.NewJSON(logger, pgstorage, backup, config.Key))
-		router.Get("/value/{type}/{name}", value.New(logger, pgstorage, config.Key))
-		router.Post("/value/", value.NewJSON(logger, pgstorage, config.Key))
-		router.Get("/", home.New(logger, pgstorage, config.Key))
+		router.Post("/update/", update.NewJSON(logger, pgstorage, backup, conf.Key))
+		router.Get("/value/{type}/{name}", value.New(logger, pgstorage, conf.Key))
+		router.Post("/value/", value.NewJSON(logger, pgstorage, conf.Key))
+		router.Get("/", home.New(logger, pgstorage, conf.Key))
 		router.Get("/ping", ping.New(logger, pgstorage))
-		router.Post("/updates/", updates.NewJSON(logger, pgstorage, backup, config.Key))
+		router.Post("/updates/", updates.NewJSON(logger, pgstorage, backup, conf.Key))
 	}
 
 	// Create and start the HTTP server.
 	srv := &http.Server{
-		Addr:    config.Addr,
+		Addr:    conf.Addr,
 		Handler: router,
+		BaseContext: func(_ net.Listener) context.Context {
+			return mainCtx
+		},
 	}
 
 	go func() {
-		err = srv.ListenAndServe()
-		if err != nil {
-			logger.Error("The server did not start!", zap.Error(err))
+		g, gCtx := errgroup.WithContext(mainCtx)
+		g.Go(func() error {
+			logger.Info("Starting server: ", zap.String("Addr", srv.Addr))
+			return srv.ListenAndServe()
+		})
+		g.Go(func() error {
+			<-gCtx.Done()
+			logger.Info("Shutdown server!")
+			return srv.Shutdown(context.Background())
+		})
+		if err := g.Wait(); err != nil {
+			logger.Info("Exit reason: ", zap.Error(err))
 		}
 	}()
 

@@ -69,7 +69,7 @@ func TestCollector_PollIntervals(t *testing.T) {
 			mockMetricUpdater.On("UpdateGauge", mock.Anything, "RandomValue", mock.AnythingOfType("float64")).Return(nil)
 			mockMetricUpdater.On("UpdateCounter", mock.Anything, "PollCount", int64(1)).Return(nil)
 
-			go Start(mockMetricUpdater, tt.pollInterval, logger, errorCh, mockMetricGeter)
+			go Start(context.Background(), mockMetricUpdater, tt.pollInterval, logger, errorCh, mockMetricGeter)
 
 			// Wait for two poll intervals to ensure the collector has run at least once
 			time.Sleep(time.Duration(tt.pollInterval*2) * time.Second)

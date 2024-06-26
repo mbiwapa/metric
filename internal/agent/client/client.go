@@ -4,7 +4,10 @@
 package client
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"strconv"
 
@@ -26,6 +29,12 @@ type Client struct {
 	Logger     *zap.Logger            // Logger is used for logging purposes.
 	Compressor *compressor.Compressor // Compressor is used to compress the data before sending.
 	Key        string                 // Key is used for generating SHA256 hashes for request validation.
+	Encoder    Encoder                // Encoder is used to encrypt the data before sending.
+	context    context.Context        // context is the context for the client.
+}
+
+type Encoder interface {
+	EncryptData(data []byte) ([]byte, error)
 }
 
 // New initializes and returns a new instance of the Client struct.
@@ -39,7 +48,7 @@ type Client struct {
 // Returns:
 //   - *Client: A pointer to the newly created Client instance.
 //   - error: An error if there is an issue during the creation of the Client instance.
-func New(url string, key string, logger *zap.Logger) (*Client, error) {
+func New(ctx context.Context, url string, key string, logger *zap.Logger, encoder Encoder) (*Client, error) {
 	var client Client
 	client.URL = url
 	client.Client = &http.Client{
@@ -48,6 +57,8 @@ func New(url string, key string, logger *zap.Logger) (*Client, error) {
 	client.Logger = logger
 	client.Compressor = compressor.New(logger)
 	client.Key = key
+	client.Encoder = encoder
+	client.context = ctx
 
 	return &client, nil
 }
@@ -103,8 +114,22 @@ func (c *Client) Send(gauges [][]string, counters [][]string) error {
 		return errCompress
 	}
 
+	// Read the compressed data into a byte slice
+	compressedBytes, errBytes := io.ReadAll(compressedData)
+	if errBytes != nil {
+		logger.Error("Cant read compressed data", zap.Error(errBytes))
+		return errBytes
+	}
+
+	// Encrypt the compressed data
+	encryptedData, errEncrypt := c.Encoder.EncryptData(compressedBytes)
+	if errEncrypt != nil {
+		logger.Error("Cant encrypt data", zap.Error(errEncrypt))
+		return errEncrypt
+	}
+
 	action := func(attempt uint) error {
-		req, err := http.NewRequest("POST", c.URL+"/updates/", compressedData)
+		req, err := http.NewRequest("POST", c.URL+"/updates/", bytes.NewReader(encryptedData))
 		if err != nil {
 			logger.Error("Cant create request", zap.Error(err), zap.Uint("attempt", attempt))
 			return err
@@ -156,9 +181,15 @@ func (c *Client) Send(gauges [][]string, counters [][]string) error {
 //   - errorChanel: A channel to send errors if there is an issue during the processing or sending of the metrics.
 func (c *Client) Worker(jobs <-chan map[string][][]string, errorChanel chan<- error) {
 	for j := range jobs {
-		err := c.Send(j["gauge"], j["counter"])
-		if err != nil {
-			errorChanel <- err
+		select {
+		// Завершаем работу если контекст закрылся
+		case <-c.context.Done():
+			return
+		default:
+			err := c.Send(j["gauge"], j["counter"])
+			if err != nil {
+				errorChanel <- err
+			}
 		}
 	}
 }

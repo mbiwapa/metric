@@ -1,12 +1,14 @@
 package client
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/mbiwapa/metric/internal/agent/encoder"
 	"github.com/mbiwapa/metric/internal/logger"
 )
 
@@ -48,7 +50,12 @@ func TestClient_Send(t *testing.T) {
 				panic("Logger initialization error: " + err.Error())
 			}
 
-			c, err := New(srv.URL, "", logger)
+			encoder, errEncoder := encoder.New("")
+			if errEncoder != nil {
+				panic("Encoder initialization error: " + errEncoder.Error())
+			}
+
+			c, err := New(context.Background(), srv.URL, "", logger, encoder)
 
 			require.NoError(t, err)
 

@@ -18,6 +18,7 @@ import (
 
 	"github.com/mbiwapa/metric/internal/agent/client"
 	"github.com/mbiwapa/metric/internal/agent/collector"
+	"github.com/mbiwapa/metric/internal/agent/encoder"
 	"github.com/mbiwapa/metric/internal/agent/sender"
 	"github.com/mbiwapa/metric/internal/agent/source/gopsutilsource"
 	"github.com/mbiwapa/metric/internal/agent/source/memstatssource"
@@ -54,7 +55,7 @@ func main() {
 	// Load configuration.
 	conf, err := config.MustLoadConfig()
 	if err != nil {
-		panic("Logger initialization error: " + err.Error())
+		panic("Config load error: " + err.Error())
 	}
 
 	// Initialize logger.
@@ -83,8 +84,14 @@ func main() {
 		logger.Error("Storage unavailable!", zap.Error(err))
 	}
 
+	// Initialize encoder.
+	scrambler, errDecoder := encoder.New(conf.PublicKeyPath)
+	if errDecoder != nil {
+		logger.Error("Failed to create scrambler", zap.Error(errDecoder))
+	}
+
 	// Initialize HTTP client.
-	client, err := client.New(conf.Addr, conf.Key, logger)
+	client, err := client.New(mainCtx, conf.Addr, conf.Key, logger, scrambler)
 	if err != nil {
 		logger.Error("Failed to create HTTP client", zap.Error(err))
 	}
@@ -93,7 +100,7 @@ func main() {
 	errorChanel := make(chan error)
 
 	// Start the collector routine.
-	collector.Start(storage, conf.PollInterval, logger, errorChanel, memSource, psutilSource)
+	collector.Start(mainCtx, storage, conf.PollInterval, logger, errorChanel, memSource, psutilSource)
 
 	// Start the sender routine.
 	sender.Start(mainCtx, storage, client, conf.ReportInterval, logger, conf.WorkerCount, errorChanel)
