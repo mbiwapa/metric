@@ -204,3 +204,12 @@ func (s *Storage) UpdateBatch(_ context.Context, gauges [][]string, counters [][
 
 	return nil
 }
+
+// Ping checks if the storage is alive.
+func (s *Storage) Ping(_ context.Context) error {
+	return nil
+}
+
+// Close closes the storage.
+func (s *Storage) Close() {
+}
