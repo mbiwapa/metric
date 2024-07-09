@@ -20,7 +20,6 @@ import (
 	"github.com/mbiwapa/metric/internal/lib/signature"
 	"github.com/mbiwapa/metric/internal/server/backuper"
 	"github.com/mbiwapa/metric/internal/storage"
-	storageErrors "github.com/mbiwapa/metric/internal/storage"
 	pb "github.com/mbiwapa/metric/proto"
 )
 
@@ -158,14 +157,14 @@ func (s *MetricsServer) GetValue(ctx context.Context, req *pb.GetValueRequest) (
 
 	// Retrieve the metric value from storage
 	value, errStor := s.storage.GetMetric(databaseCtx, req.Metric.Type, req.Metric.Id)
-	if errors.Is(errStor, storageErrors.ErrMetricNotFound) {
+	if errors.Is(errStor, storage.ErrMetricNotFound) {
 		log.Info(
 			"Metric is not found",
 			zap.String("name", req.Metric.Id),
 			zap.String("type", req.Metric.Type))
 		return nil, status.Errorf(codes.NotFound, `Metric %s not found`, req.Metric.Id)
 	}
-	if errStor != nil && !errors.Is(errStor, storageErrors.ErrMetricNotFound) {
+	if errStor != nil && !errors.Is(errStor, storage.ErrMetricNotFound) {
 		log.Error("Failed to get metric", zap.Error(errStor))
 		return nil, status.Errorf(codes.Internal, `Failed to get metric: %s`, req.Metric.Id)
 	}
