@@ -1,13 +1,13 @@
-// Package client provides a client that sends metrics to a server.
-// It contains the necessary configurations such as URL, HTTP client, logger, compressor, and a key for hash generation.
-// It also provides functions to send metrics to the server and to run a worker that continuously reads jobs from a channel and sends the metrics using the Send method.
+// Package client provides functionality for sending metrics to a server.
 package client
 
 import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"strconv"
 
@@ -20,6 +20,32 @@ import (
 	"github.com/mbiwapa/metric/internal/lib/retry/backoff"
 	"github.com/mbiwapa/metric/internal/lib/signature"
 )
+
+// getHostIP retrieves the IP address of the host.
+//
+// The function iterates over all network interfaces on the host and returns the first found IP address
+// that is not a loopback address.
+//
+// Returns:
+//   - string: The IP address of the host as a string.
+//   - error: An error if the IP address could not be retrieved.
+func getHostIP() (string, error) {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return "", err
+	}
+
+	for _, addr := range addrs {
+		// Check if the address is an IP address and not a loopback address
+		if ipNet, ok := addr.(*net.IPNet); ok && !ipNet.IP.IsLoopback() {
+			if ipNet.IP.To4() != nil {
+				return ipNet.IP.String(), nil
+			}
+		}
+	}
+
+	return "", fmt.Errorf("не удалось получить IP-адрес хоста")
+}
 
 // Client represents a client that sends metrics to a server.
 // It contains the necessary configurations such as URL, HTTP client, logger, compressor, and a key for hash generation.
@@ -138,6 +164,14 @@ func (c *Client) Send(gauges [][]string, counters [][]string) error {
 
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Content-Encoding", "gzip")
+
+		// Get the host IP address
+		hostIP, err := getHostIP()
+		if err != nil {
+			logger.Error("Cant get host IP address", zap.Error(err))
+			return err
+		}
+		req.Header.Set("X-Real-IP", hostIP)
 
 		if c.Key != "" {
 			hashStr := signature.GetHash(c.Key, string(data), logger)

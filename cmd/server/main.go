@@ -19,11 +19,13 @@ import (
 	"github.com/go-chi/chi/middleware"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/grpc"
 
 	config "github.com/mbiwapa/metric/internal/config/server"
 	"github.com/mbiwapa/metric/internal/logger"
 	"github.com/mbiwapa/metric/internal/server/backuper"
 	"github.com/mbiwapa/metric/internal/server/decoder"
+	"github.com/mbiwapa/metric/internal/server/grpc/metric"
 	"github.com/mbiwapa/metric/internal/server/handlers/home"
 	"github.com/mbiwapa/metric/internal/server/handlers/ping"
 	"github.com/mbiwapa/metric/internal/server/handlers/update"
@@ -32,9 +34,12 @@ import (
 	mwDecoder "github.com/mbiwapa/metric/internal/server/middleware/decoder"
 	"github.com/mbiwapa/metric/internal/server/middleware/decompressor"
 	mwLogger "github.com/mbiwapa/metric/internal/server/middleware/logger"
+	"github.com/mbiwapa/metric/internal/server/middleware/security"
 	signatureCheck "github.com/mbiwapa/metric/internal/server/middleware/signature/check"
+	"github.com/mbiwapa/metric/internal/storage"
 	"github.com/mbiwapa/metric/internal/storage/memstorage"
 	"github.com/mbiwapa/metric/internal/storage/postgre"
+	pb "github.com/mbiwapa/metric/proto"
 )
 
 var buildVersion string
@@ -77,39 +82,10 @@ func main() {
 		logger.Error("Can't create decoder", zap.Error(err))
 	}
 
-	// Initialize in-memory storage.
-	storage, err := memstorage.New()
+	// Initialize storage and backup mechanisms.
+	storage, backup, err := createStorage(conf, logger)
 	if err != nil {
-		logger.Error("Can't create storage", zap.Error(err))
-	}
-
-	// Initialize PostgreSQL storage if DatabaseDSN is provided.
-	var pgstorage *postgre.Storage
-	if conf.DatabaseDSN != "" {
-		pgstorage, err = postgre.New(conf.DatabaseDSN)
-		if err != nil {
-			logger.Error("Can't create postgree storage", zap.Error(err))
-		}
-		defer pgstorage.Close()
-	}
-
-	// Initialize the backup mechanism.
-	var backup *backuper.Buckuper
-	if conf.DatabaseDSN == "" {
-		backup, err = backuper.New(
-			storage,
-			conf.StoreInterval,
-			conf.StoragePath,
-			logger)
-	} else {
-		backup, err = backuper.New(
-			pgstorage,
-			conf.StoreInterval,
-			conf.StoragePath,
-			logger)
-	}
-	if err != nil {
-		logger.Error("Can't create saver", zap.Error(err))
+		logger.Error("Can't create storage or backup", zap.Error(err))
 	}
 	defer backup.SaveToFile()
 	if conf.Restore {
@@ -122,6 +98,7 @@ func main() {
 	// Set up the HTTP router and middleware.
 	router := chi.NewRouter()
 	router.Use(
+		security.New(conf.TrustedSubnet),
 		middleware.RequestID,
 		mwLogger.New(logger),
 		middleware.URLFormat,
@@ -133,22 +110,13 @@ func main() {
 	router.Post("/", undefinedType)
 
 	// Set up routes based on the storage type.
-	if conf.DatabaseDSN == "" {
-		router.Post("/update/{type}/{name}/{value}", update.New(logger, storage, backup))
-		router.Post("/update/", update.NewJSON(logger, storage, backup, conf.Key))
-		router.Get("/value/{type}/{name}", value.New(logger, storage, conf.Key))
-		router.Post("/value/", value.NewJSON(logger, storage, conf.Key))
-		router.Get("/", home.New(logger, storage, conf.Key))
-		router.Post("/updates/", updates.NewJSON(logger, storage, backup, conf.Key))
-	} else {
-		router.Post("/{type}/{name}/{value}", update.New(logger, pgstorage, backup))
-		router.Post("/update/", update.NewJSON(logger, pgstorage, backup, conf.Key))
-		router.Get("/value/{type}/{name}", value.New(logger, pgstorage, conf.Key))
-		router.Post("/value/", value.NewJSON(logger, pgstorage, conf.Key))
-		router.Get("/", home.New(logger, pgstorage, conf.Key))
-		router.Get("/ping", ping.New(logger, pgstorage))
-		router.Post("/updates/", updates.NewJSON(logger, pgstorage, backup, conf.Key))
-	}
+	router.Post("/{type}/{name}/{value}", update.New(logger, storage, backup))
+	router.Post("/update/", update.NewJSON(logger, storage, backup, conf.Key))
+	router.Get("/value/{type}/{name}", value.New(logger, storage, conf.Key))
+	router.Post("/value/", value.NewJSON(logger, storage, conf.Key))
+	router.Get("/", home.New(logger, storage, conf.Key))
+	router.Get("/ping", ping.New(logger, storage))
+	router.Post("/updates/", updates.NewJSON(logger, storage, backup, conf.Key))
 
 	// Create and start the HTTP server.
 	srv := &http.Server{
@@ -158,6 +126,8 @@ func main() {
 			return mainCtx
 		},
 	}
+
+	grpcRun(mainCtx, conf, logger, storage, backup)
 
 	go func() {
 		g, gCtx := errgroup.WithContext(mainCtx)
@@ -186,4 +156,87 @@ func main() {
 // undefinedType handles requests with undefined metric types by returning a 400 Bad Request status.
 func undefinedType(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusBadRequest)
+}
+
+// createStorage initializes the appropriate storage based on the provided configuration.
+// It returns the initialized storage and any error encountered during the initialization.
+//
+// Parameters:
+//   - conf: The configuration settings.
+//
+// Returns:
+//   - storage: The initialized storage (either in-memory or PostgreSQL).
+//   - backup: The initialized backup mechanism.
+//   - err: Any error encountered during the initialization.
+func createStorage(conf *config.Config, logger *zap.Logger) (storage.Storage, *backuper.Buckuper, error) {
+	var s storage.Storage
+	var err error
+
+	// Initialize in-memory storage.
+	memStorage, err := memstorage.New()
+	if err != nil {
+		logger.Error("Can't create in-memory storage", zap.Error(err))
+		return nil, nil, err
+	}
+	s = memStorage
+
+	// Initialize PostgreSQL storage if DatabaseDSN is provided.
+	if conf.DatabaseDSN != "" {
+		pgStorage, err := postgre.New(conf.DatabaseDSN)
+		if err != nil {
+			logger.Error("Can't create PostgreSQL storage", zap.Error(err))
+			return nil, nil, err
+		}
+		s = pgStorage
+		defer pgStorage.Close()
+	}
+
+	// Initialize the backup mechanism.
+	var backup *backuper.Buckuper
+	if conf.DatabaseDSN == "" {
+		backup, err = backuper.New(
+			memStorage,
+			conf.StoreInterval,
+			conf.StoragePath,
+			logger)
+	} else {
+		backup, err = backuper.New(
+			s,
+			conf.StoreInterval,
+			conf.StoragePath,
+			logger)
+	}
+	if err != nil {
+		logger.Error("Can't create backup", zap.Error(err))
+		return nil, nil, err
+	}
+
+	return s, backup, nil
+}
+
+func grpcRun(ctx context.Context, conf *config.Config, logger *zap.Logger, storage storage.Storage, backup *backuper.Buckuper) {
+	listen, err := net.Listen("tcp", conf.GRPCPort)
+	if err != nil {
+		logger.Fatal("Cannot start grpc listen", zap.Error(err))
+	}
+	// создаём gRPC-сервер с перехватчиком
+	s := grpc.NewServer()
+	pb.RegisterMetricServiceServer(s, metric.NewMetricServer(conf, logger, storage, backup))
+
+	go func() {
+		g, gCtx := errgroup.WithContext(ctx)
+		g.Go(func() error {
+			logger.Info("Starting GRPC server", zap.String("Addr", conf.GRPCPort))
+			return s.Serve(listen)
+		})
+		g.Go(func() error {
+			<-gCtx.Done()
+			logger.Info("Shutdown GRPC server!")
+			s.GracefulStop()
+			return nil
+		})
+		if errG := g.Wait(); errG != nil {
+			logger.Info("Exit reason: ", zap.Error(errG))
+		}
+	}()
 }
