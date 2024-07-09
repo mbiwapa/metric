@@ -12,6 +12,7 @@ import (
 // Config holds all the server configurations.
 type Config struct {
 	Addr           string `json:"address,omitempty"`        // Addr Server address and port
+	GRPCPort       string `json:"grpc_port,omitempty"`      // GRPCPort gRPC server port
 	StoreInterval  int64  `json:"store_interval,omitempty"` // StoreInterval Interval in seconds to save current server metrics to disk
 	StoragePath    string `json:"store_file,omitempty"`     // StoragePath Full path to the file where current values are saved
 	Restore        bool   `json:"restore,omitempty"`        // Restore Whether to load previously saved values from the specified file at server startup
@@ -29,6 +30,7 @@ func MustLoadConfig() *Config {
 
 	// Define command-line flags and their default values
 	flag.StringVar(&config.Addr, "a", "localhost:8080", "Адрес порт сервера")
+	flag.StringVar(&config.GRPCPort, "grpc-port", ":3200", "gRPC порт сервера")
 	flag.Int64Var(&config.StoreInterval, "i", 300, "Интервал времени в секундах, по истечении которого текущие показания сервера сохраняются на диск")
 	flag.StringVar(&config.StoragePath, "f", "/tmp/metrics-db.json", "Полное имя файла, куда сохраняются текущие значения")
 	flag.BoolVar(&config.Restore, "r", true, "Загружать или нет ранее сохранённые значения из указанного файла при старте сервера")
@@ -44,6 +46,11 @@ func MustLoadConfig() *Config {
 	envAddr := os.Getenv("ADDRESS")
 	if envAddr != "" {
 		config.Addr = envAddr
+	}
+
+	envGRPCPort := os.Getenv("GRPC_PORT")
+	if envGRPCPort != "" {
+		config.GRPCPort = envGRPCPort
 	}
 
 	storeInterval := os.Getenv("STORE_INTERVAL")
@@ -101,6 +108,9 @@ func MustLoadConfig() *Config {
 			if errDecode := decoder.Decode(&fileConfig); errDecode == nil {
 				if config.Addr == "localhost:8080" && fileConfig.Addr != "" {
 					config.Addr = fileConfig.Addr
+				}
+				if config.GRPCPort == ":3200" && fileConfig.GRPCPort != "" {
+					config.GRPCPort = fileConfig.GRPCPort
 				}
 				if config.StoreInterval == 300 && fileConfig.StoreInterval != 0 {
 					config.StoreInterval = fileConfig.StoreInterval

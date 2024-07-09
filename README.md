@@ -30,3 +30,10 @@ git fetch template && git checkout template/main .github
 При мёрже ветки с инкрементом в основную ветку `main` будут запускаться все автотесты.
 
 Подробнее про локальный и автоматический запуск читайте в [README автотестов](https://github.com/Yandex-Practicum/go-autotests).
+
+## Генерация protobuf
+
+Для генерации protobuf используйте следующую команду:
+```sh
+protoc --go_out=. --go_opt=paths=source_relative  --go-grpc_out=. --go-grpc_opt=paths=source_relative  proto/metric.proto
+```

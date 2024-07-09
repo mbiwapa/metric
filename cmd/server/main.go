@@ -19,11 +19,13 @@ import (
 	"github.com/go-chi/chi/middleware"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/grpc"
 
 	config "github.com/mbiwapa/metric/internal/config/server"
 	"github.com/mbiwapa/metric/internal/logger"
 	"github.com/mbiwapa/metric/internal/server/backuper"
 	"github.com/mbiwapa/metric/internal/server/decoder"
+	"github.com/mbiwapa/metric/internal/server/grpc/metric"
 	"github.com/mbiwapa/metric/internal/server/handlers/home"
 	"github.com/mbiwapa/metric/internal/server/handlers/ping"
 	"github.com/mbiwapa/metric/internal/server/handlers/update"
@@ -37,6 +39,7 @@ import (
 	"github.com/mbiwapa/metric/internal/storage"
 	"github.com/mbiwapa/metric/internal/storage/memstorage"
 	"github.com/mbiwapa/metric/internal/storage/postgre"
+	pb "github.com/mbiwapa/metric/proto"
 )
 
 var buildVersion string
@@ -124,6 +127,8 @@ func main() {
 		},
 	}
 
+	grpcRun(mainCtx, conf, logger, storage, backup)
+
 	go func() {
 		g, gCtx := errgroup.WithContext(mainCtx)
 		g.Go(func() error {
@@ -207,4 +212,31 @@ func createStorage(conf *config.Config, logger *zap.Logger) (storage.Storage, *b
 	}
 
 	return s, backup, nil
+}
+
+func grpcRun(ctx context.Context, conf *config.Config, logger *zap.Logger, storage storage.Storage, backup *backuper.Buckuper) {
+	listen, err := net.Listen("tcp", conf.GRPCPort)
+	if err != nil {
+		logger.Fatal("Cannot start grpc listen", zap.Error(err))
+	}
+	// создаём gRPC-сервер с перехватчиком
+	s := grpc.NewServer()
+	pb.RegisterMetricServiceServer(s, metric.NewMetricServer(conf, logger, storage, backup))
+
+	go func() {
+		g, gCtx := errgroup.WithContext(ctx)
+		g.Go(func() error {
+			logger.Info("Starting GRPC server", zap.String("Addr", conf.GRPCPort))
+			return s.Serve(listen)
+		})
+		g.Go(func() error {
+			<-gCtx.Done()
+			logger.Info("Shutdown GRPC server!")
+			s.GracefulStop()
+			return nil
+		})
+		if errG := g.Wait(); errG != nil {
+			logger.Info("Exit reason: ", zap.Error(errG))
+		}
+	}()
 }

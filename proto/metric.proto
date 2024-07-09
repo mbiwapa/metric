@@ -1,0 +1,61 @@
+syntax = "proto3";
+//protoc --go_out=. --go_opt=paths=source_relative  --go-grpc_out=. --go-grpc_opt=paths=source_relative  proto/metric.proto
+package metric;
+
+option go_package = "metric/proto";
+
+service MetricService {
+  rpc UpdateMetric (UpdateMetricRequest) returns (UpdateMetricResponse);
+  rpc GetValue (GetValueRequest) returns (GetValueResponse);
+  rpc Home (HomeRequest) returns (HomeResponse);
+  rpc Ping (PingRequest) returns (PingResponse);
+  rpc UpdateBatch (UpdateBatchRequest) returns (UpdateBatchResponse);
+}
+
+message UpdateMetricRequest {
+  Metric metric = 1;
+}
+
+message UpdateMetricResponse {
+  Metric metric = 1;
+}
+
+message GetValueRequest {
+  Metric metric = 1;
+}
+
+message GetValueResponse {
+  Metric metric = 1;
+}
+
+message HomeRequest {}
+
+message HomeResponse {
+  repeated Metric metrics = 1;
+}
+
+message PingRequest {}
+
+message PingResponse {
+  StatusCode status = 1;
+}
+
+message UpdateBatchRequest {
+  repeated Metric metrics = 1;
+}
+
+message UpdateBatchResponse {
+  repeated Metric metrics = 1;
+}
+
+message Metric {
+  string id = 1;              // ID is the name of the metric.
+  string type = 2;            // MType is the type of the metric, which can be either "gauge" or "counter".
+  int64 delta = 3;            // Delta is the value of the metric if the type is "counter".
+  double value = 4;           // Value is the value of the metric if the type is "gauge".
+}
+
+enum StatusCode {
+  OK = 0;
+  ERROR = 1;
+}
